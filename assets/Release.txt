@@ -1,0 +1,12 @@
+shaders/LitTriangle.vert
+shaders/LitTriangle.frag
+shaders/UnlitTriangle.vert
+shaders/UnlitTriangle.frag
+shaders/Line.vert
+shaders/Line.frag
+Roboto.ttf
+MeshPrimitives/Triangle.bin
+MeshPrimitives/Circle.bin
+MeshPrimitives/Pyramid.bin
+MeshPrimitives/Quad.bin
+MeshPrimitives/Cube.bin
