@@ -22,7 +22,7 @@ void main() {
 
   for(int i = 0; i < lightCount; i++) {
     vec3 lightDir = lights[i].position - position;
-    float strength = 1-length(lightDir)/lights[i].range;
+    float strength = 1-min(length(lightDir), lights[i].range)/lights[i].range;
     lightDir = normalize(lightDir);
 
     float dif = max(dot(vNormal, lightDir) * strength, 0);

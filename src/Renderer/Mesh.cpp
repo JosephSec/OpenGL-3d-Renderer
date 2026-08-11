@@ -15,6 +15,7 @@ Mesh Mesh::Circle;
 Mesh Mesh::Pyramid;
 Mesh Mesh::Quad;
 Mesh Mesh::Cube;
+Mesh Mesh::Cone;
 
 
 static inline uint64_t SerializeVertex(const uint32_t index, const Color& color) {
@@ -28,12 +29,15 @@ void Mesh::InitPrimitives() {
   if(!LoadPrimitive("Pyramid", Pyramid))   Debug::error("failed to load Pyramid Primitive\n\n");
   if(!LoadPrimitive("Quad", Quad))         Debug::error("failed to load Quad Primitive\n\n");
   if(!LoadPrimitive("Cube", Cube))         Debug::error("failed to load Cube Primitive\n\n");
+  // if(!LoadPrimitive("Cone", Cone))         Debug::error("failed to load Cone Primitive\n\n");
+  Cone = GenerateCone(12, 2, 1);
 
   // SaveAsPrimitive("Triangle", Triangle);
   // SaveAsPrimitive("Circle", Circle);
   // SaveAsPrimitive("Pyramid", Pyramid);
   // SaveAsPrimitive("Quad", Quad);
   // SaveAsPrimitive("Cube", Cube);
+  SaveAsPrimitive("Cone", Cone);
 }
 void Mesh::SaveAsPrimitive(const string& name, const Mesh& mesh) {
   const string folder = System::PATH+"/assets/MeshPrimitives";
@@ -114,6 +118,33 @@ bool Mesh::LoadPrimitive(const string& name, Mesh& mesh) {
   }
 
   return mesh.vertices.size() > 0 && mesh.indecies.size() > 0 && mesh.colors.size() > 0;
+}
+Mesh Mesh::GenerateCone(unsigned int segCount, float height, float radius) {
+  segCount = std::max((int)segCount, 3);
+  Mesh mesh;
+
+  for(int i = 0; i < segCount; i++) {
+    const float radians = (i / (float)segCount) * M_PI * 2;
+    mesh.vertices.push_back(Vec3(cos(radians) * radius, -height/2.0f, sin(radians) * radius));
+  }
+
+  for(int i = 1; i < segCount-1; i++) {
+    mesh.indecies.push_back(0);
+    mesh.indecies.push_back(i);
+    mesh.indecies.push_back(i+1);
+  }
+
+  mesh.vertices.push_back(Vec3(0,height/2.0f,0));
+
+  for(int i = 0; i < segCount; i++) {
+    mesh.indecies.push_back(i);
+    mesh.indecies.push_back(segCount);
+    mesh.indecies.push_back((i+1) % segCount);
+  }
+
+  mesh.colors = std::vector<Color>(mesh.indecies.size(), Color::White);
+
+  return mesh;
 }
 
 

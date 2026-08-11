@@ -48,11 +48,11 @@ public:
     os << "(" << rect.x << ", " << rect.y << ", " << rect.w << ", " << rect.h << ")";
     return os;
   }
-  
+
   inline operator RectI() const {
-    return RectI(x,y,w,h);
+    return RectI(Vec2(x,y),Vec2(w,h));
   }
   inline operator RectF() const {
-    return RectF(x,y,w,h);
+    return RectF(Vec2(x,y),Vec2(w,h));
   }
 };

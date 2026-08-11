@@ -2,8 +2,13 @@
 #include <System.hpp>
 #include <User.hpp>
 
+#include <UI.hpp>
+
 #include <GL/glew.h>
 #include <SFML/OpenGL.hpp>
+
+#include <Engine/Gizmos.hpp>
+#include <Engine/TransformGizmo.hpp>
 
 
 sf::RenderWindow* Renderer::window;
@@ -30,26 +35,17 @@ Shader Renderer::LitTriangleShader;
 Shader Renderer::UnlitTriangleShader;
 Shader Renderer::LineShader;
 
+std::vector<Gizmo*> Renderer::gizmos;
+
 std::vector<GameObject> Renderer::objects;
 std::vector<Mesh> Renderer::meshs;
 
+bool Renderer::DrawLightRange = false;
 std::vector<Light> Renderer::lights;
 
-GameObject* Renderer::selected;
-Line Renderer::line;
-
-std::vector<DebugRadius> Renderer::debugRadiusCalls;
+unsigned int Renderer::coneFaceCount = 8;
 
 
-void (*DebugRadius::DebugDrawRadius)(const Vec3&, float, const Color&) = &Renderer::DebugDrawRadius;
-
-
-static bool DrawLightRange = false;
-static void ToggleDrawLightRange() {
-  system("cls");
-  DrawLightRange = !DrawLightRange;
-  std::cout << "Draw Light Range: " << (DrawLightRange? "True" : "False");
-}
 void Renderer::init() {
   sf::ContextSettings settings;
   settings.depthBits = 24;
@@ -57,16 +53,16 @@ void Renderer::init() {
   settings.antiAliasingLevel = 4;
   settings.majorVersion = 3;
   settings.minorVersion = 3;
-  settings.attributeFlags = sf::ContextSettings::Core;
+  settings.attributeFlags = sf::ContextSettings::Default;
 
-  window = new sf::RenderWindow(sf::VideoMode(Vec2(800,600)), "Window", sf::State::Windowed, settings);
+  window = new sf::RenderWindow(sf::VideoMode(Vec2(1600,900)), "Window", sf::State::Windowed, settings);
   window->setFramerateLimit(120);
   window->requestFocus();
 
   initGL();
   UpdateViewMatrix();
-  HandleResize();
   update();
+  HandleResize();
 
   if(!font.openFromFile(System::PATH+"/assets/Roboto.ttf"))
     Debug::error("font file missing or can't be loaded");
@@ -82,8 +78,11 @@ void Renderer::init() {
   meshs.push_back(Mesh::Triangle);
   meshs.push_back(Mesh::Quad);
   meshs.push_back(Mesh::Cube);
+  meshs.push_back(Mesh::Cone);
+  meshs.push_back(Mesh::GenerateCone(coneFaceCount, 2, 1));
 
-  const std::vector<string> names = {"Pyramid", "Circle", "Triangle", "Quad", "Cube"};
+  const std::vector<string> names = {"Pyramid", "Circle", "Triangle", "Quad", "Cube", "Cone", "Arrow Tip"};
+
 
   const float offset = ((meshs.size()-1) * 4)/2;
   for(int i = 0; i < meshs.size(); i++) {
@@ -91,41 +90,26 @@ void Renderer::init() {
     objects.back().name = names[i];
   }
 
-  for(int i = 1; i < objects.size(); i++) objects[i].transform.rotation = Quaternion::Euler(90,0,0);
+  for(int i = 0; i < 3; i++) objects[i+1].transform.rotation = Quaternion::Euler(90,0,0);
 
 
   lights.push_back(Light(Vec3(), Color::Red));
-  // lights.push_back(Light(Vec3(), Color::Yellow));
+  lights.push_back(Light(Vec3(), Color::Yellow));
   lights.push_back(Light(Vec3(), Color::Green));
-  // lights.push_back(Light(Vec3(), Color::Cyan));
+  lights.push_back(Light(Vec3(), Color::Cyan));
   lights.push_back(Light(Vec3(), Color::Blue));
-  // lights.push_back(Light(Vec3(), Color::Magenta));
-  // lights.push_back(Light(Vec3(), Color::White));
-
-
-  static const unsigned int pointC = 24;
-  for(int i = 0; i < pointC; i++) {
-    const float radians = (i / (float)pointC) * M_PI * 2;
-    line.vertices.push_back(Vec3(-cos(radians), sin(radians), 0));
-  }
-
-  for(int i = 0; i < pointC; i++) {
-    line.indecies.push_back(i);
-    line.indecies.push_back((i+1) % pointC);
-  }
-
-  line.colors = std::vector<Color>(line.indecies.size(), Color::Green);
-
-
-  ToggleDrawLightRange();
+  lights.push_back(Light(Vec3(), Color::Magenta));
+  lights.push_back(Light(Vec3(), Color::White));
 }
 void Renderer::initGL() {
   GLenum err = glewInit();
   if(err != GLEW_OK) std::cerr << "GLEW init error: " << glewGetErrorString(err) << '\n';
 
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_FRONT);
+  glEnable(GL_BLEND);
+  
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CW);
 
   glClearColor(.1f,.1f,.15f, 1);
 
@@ -173,6 +157,7 @@ void Renderer::update() {
   windowSize = window->getSize();
   windowCenter = windowSize/2;
 
+
   if(User::GetMouseButton(Mouse::Button::Right)) {
     static Vec2 mouseAnchor;
     static Vec2 mouseDelta;
@@ -210,27 +195,36 @@ void Renderer::update() {
     Renderer::UpdateViewMatrix();
   }
 
-  if(User::GetKeyDown(Keyboard::Key::X)) ToggleDrawLightRange();
+  static unsigned int TEMP_coneFaceCount = coneFaceCount;
+  if(TEMP_coneFaceCount != coneFaceCount) {
+    coneFaceCount = std::max((unsigned int)3, coneFaceCount);
+    meshs.back() = Mesh::GenerateCone(coneFaceCount, 2, 1);
+  }
 
 
   for(GameObject& object : objects) object.update();
 
-  const float seg = M_PI * 2 / (float)lights.size();
-  static float t = 0;
-  t += .05f * System::deltaTime;
-  const float radians = t * M_PI * 2;
+  { //Update Lights
+    const float seg = M_PI * 2 / (float)lights.size();
+    static float t = 0;
+    t += .05f * System::deltaTime;
+    const float radians = t * M_PI * 2;
 
-  for(int i = 0; i < lights.size(); i++) {
-    const float rVal = radians + seg * i;
-    lights[i].transform.position = Vec3(cos(rVal) * 12, sin(rVal*5)*2, sin(rVal*5) * 4);
+    const float moveWidth = (objects.size()/2.0f) * 4;
+    for(int i = 0; i < lights.size(); i++) {
+      const float rVal = radians + seg * i;
+      lights[i].transform.position = Vec3(cos(rVal) * moveWidth, sin(rVal*5)*2, sin(rVal*5) * 4);
+      // lights[i].transform.position = Vec3(cos(rVal/3) * moveWidth, -sin(rVal*5)*4, cos(rVal*5) * 4);
 
-    lights[i].update();
+      lights[i].update();
+    }
   }
 }
 void Renderer::draw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_CULL_FACE);
   
-  { //Lit Shader
+  { //Lit Objects
     glUseProgram(LitTriangleShader);
     LitTriangleShader.SetUniform("projection", glm::make_mat4(projection));
     LitTriangleShader.SetUniform("view", glm::make_mat4(view));
@@ -249,51 +243,113 @@ void Renderer::draw() {
     for(const GameObject& object : objects) object.draw();
   }
 
-  { //Unlit Shader
+  { //Unlit Objects
     glUseProgram(UnlitTriangleShader);
     UnlitTriangleShader.SetUniform("projection", glm::make_mat4(projection));
     UnlitTriangleShader.SetUniform("view", glm::make_mat4(view));
 
     for(const Light& light : lights) {
       light.draw();
-      if(DrawLightRange) DrawRadius(light.transform.position, light.range, light.color);
+      if(DrawLightRange) Gizmos::DrawRadius(light.transform.position, light.range, light.color);
+    }
+
+    if(System::rayCastHit) {
+      float model[16];
+      Transform transform(Vec3(), camera.rotation, Vec3one*.1f);
+
+      Mesh mesh = Mesh::Circle;
+      mesh.colors = std::vector<Color>(mesh.indecies.size(), Color::Red);
+
+      for(const Vec3& vec : System::rayCastHit.intersects) {
+        transform.position = vec;
+        transform.getMatrix(model);
+        UnlitTriangleShader.SetUniform("model", glm::make_mat4(model));
+        mesh.draw();
+      }
+    }
+
+    { //Gizmos
+      Gizmos::draw();
+
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+
+      for(const Gizmo& gizmo : Gizmos::gizmos) gizmo.draw();
+
+      glDisable(GL_BLEND);
+      glEnable(GL_DEPTH_TEST);
     }
   }
 
-  { //Line Shader
+  { //Line Objects
     glUseProgram(LineShader);
     LineShader.SetUniform("projection", glm::make_mat4(projection));
     LineShader.SetUniform("view", glm::make_mat4(view));
 
-    for(DebugRadius& debug : debugRadiusCalls) debug();
-    debugRadiusCalls.clear();
+    for(DebugRadius& debug : Gizmos::debugRadiusCalls) debug();
+    Gizmos::debugRadiusCalls.clear();
+  }
+  
+  {
+    glDisable(GL_DEPTH_TEST);
+    glUseProgram(0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    if(selected) {
-      float model[16];
-      Transform transform(selected->transform.position, Quaternion(), Vec3one*GetRaycastRadius(selected->mesh));
-      transform.getMatrix(model);
-      LineShader.SetUniform("model", glm::make_mat4(model));
-      line.colors = std::vector<Color>(line.indecies.size(), Color::Blue);
-      line.draw();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-      transform.rotation = Quaternion::Euler(90,0,0);
-      transform.getMatrix(model);
-      LineShader.SetUniform("model", glm::make_mat4(model));    
-      line.colors = std::vector<Color>(line.indecies.size(), Color::Green);
-      line.draw();
 
-      transform.rotation = Quaternion::Euler(0,90,0);
-      transform.getMatrix(model);
-      LineShader.SetUniform("model", glm::make_mat4(model));    
-      line.colors = std::vector<Color>(line.indecies.size(), Color::Red);
-      line.draw();
+    sf::RectangleShape shape(Vec2(200, windowSize.y));
+    shape.setFillColor(Color(15,15,15));
+    draw(shape);
 
-      transform.rotation = camera.rotation;
-      transform.getMatrix(model);
-      LineShader.SetUniform("model", glm::make_mat4(model));    
-      line.colors = std::vector<Color>(line.indecies.size(), Color::White);
-      line.draw();
+    sf::Text text = TextPrefab;
+    text.setPosition(Vec2one*10);
+    text.setCharacterSize(15);
+    text.setString("Hierarchy");
+    draw(text);
+
+    sf::VertexArray splitter(sf::PrimitiveType::Lines, 2);
+    splitter[0] = sf::Vertex{Vec2(10,10 + text.getCharacterSize() + 5), Color(200,200,200)};
+    splitter[1] = sf::Vertex{splitter[0].position + Vec2right * (shape.getSize().x - 20), Color(200,200,200)};
+    draw(splitter);
+
+    { //Draw Elements  
+      const Vec2 listStart = Vec2(15, splitter[0].position.y + 15);
+      const int charSize = text.getCharacterSize();
+      const int lineSpacing = 10;
+      bool mouseDown = User::GetMouseButtonDown(Mouse::Button::Left);
+      
+      sf::RectangleShape background(Vec2(splitter[1].position.x-splitter[0].position.x, charSize + lineSpacing/2.0f));      
+
+      if(mouseDown && TransformGizmo::gameObject != nullptr) mouseDown = false;
+      for(int i = 0; i < objects.size(); i++) {
+        const Vec2 elementPos = listStart + Vec2up * (charSize + lineSpacing) * i;
+        
+        background.setPosition(elementPos - Vec2right * 5);
+
+        const bool mouseIn = background.getGlobalBounds().contains(User::mousePos);
+        background.setFillColor(mouseIn ? Color(100,100,100) : Color(40,40,40));
+        draw(background);
+
+        if(mouseIn && mouseDown) TransformGizmo::gameObject = &objects[i];
+
+        text.setPosition(elementPos);
+        text.setString(objects[i].name);
+        draw(text);
+      }
     }
+
+    TransformGizmo::drawUI();
+
+
+    UI::Manager::draw();
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
   }
 
   window->display();

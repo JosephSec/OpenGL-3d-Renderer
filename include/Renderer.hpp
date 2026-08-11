@@ -10,23 +10,23 @@ using Color = sf::Color;
 #include <Renderer/Light.hpp>
 #include <Renderer/Line.hpp>
 #include <Engine/GameObject.hpp>
+#include <Engine/Gizmos.hpp>
 
 
 static inline void SetMatrixVal(float out[16], float in[16]) {
   for(int i = 0; i < 16; i++) out[i] = in[i];
 }
 
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
+///UPDATE ASPECT RATIO TO FIT VIEWPORT AREA
 
-struct DebugRadius {
-  static void (*DebugDrawRadius)(const Vec3&, float, const Color&);
-  Vec3 center;
-  float radius;
-  Color color;
 
-  void operator()() {
-    DebugDrawRadius(center, radius, color);
-  }
-};
 class Renderer {
 public:
   static sf::RenderWindow* window;
@@ -53,15 +53,15 @@ public:
   static Shader UnlitTriangleShader;
   static Shader LineShader;
 
+  static std::vector<Gizmo*> gizmos;
+
   static std::vector<GameObject> objects;
   static std::vector<Mesh> meshs;
 
+  static bool DrawLightRange;
   static std::vector<Light> lights;
 
-  static GameObject* selected;
-  static Line line;
-
-  static std::vector<DebugRadius> debugRadiusCalls;
+  static unsigned int coneFaceCount;
 
 
   static void init();
@@ -94,12 +94,14 @@ public:
     view[15] = 1;
   }
   static void HandleResize() {
-    const Vec2 windowSize = window->getSize();
-    
-    window->setView(sf::View(sf::FloatRect(Vec2(), windowSize)));
+    windowSize = window->getSize();
+    windowCenter = windowSize/2.0f;
+
+    window->setView(sf::View(sf::FloatRect(Vec2zero, windowSize)));
     glViewport(0,0, windowSize.x, windowSize.y);
 
     aspectRatio = windowSize.x / windowSize.y;
+
 
     float newProjection[16] = {
       f/aspectRatio, 0, 0, 0,
@@ -109,30 +111,6 @@ public:
     };
 
     SetMatrixVal(projection, newProjection);
-  }
-
-
-  static void DrawRadius(const Vec3& center, float radius, const Color& color = Color::Green) {
-    debugRadiusCalls.push_back(DebugRadius{center, radius, color});
-  }
-  static void DebugDrawRadius(const Vec3& center, float radius, const Color& color = Color::Green) {
-    static float model[16];
-
-    Transform transform(center, Quaternion(), Vec3one*radius);
-    transform.getMatrix(model);
-    LineShader.SetUniform("model", glm::make_mat4(model));
-    line.colors = std::vector<Color>(line.indecies.size(), color);
-    line.draw();
-
-    transform.rotation = Quaternion::Euler(90,0,0);
-    transform.getMatrix(model);
-    LineShader.SetUniform("model", glm::make_mat4(model));    
-    line.draw();
-
-    transform.rotation = Quaternion::Euler(0,90,0);
-    transform.getMatrix(model);
-    LineShader.SetUniform("model", glm::make_mat4(model));    
-    line.draw();
   }
 };
 
@@ -154,10 +132,10 @@ static Vec3 ScreenToWorld(const Vec2& screen, float depth = 0) {
 }
 
 
-static inline Vec3 ApplyTransform(const Vec3& vec, const Transform& transform) {
+static Vec3 ApplyTransform(const Vec3& vec, const Transform& transform, bool isDirection = true) {
   float mat4[16];
   transform.getMatrix(mat4);
-  glm::vec3 result = glm::make_mat4(mat4) * glm::vec4(vec.x, vec.y, vec.z, 0);
+  glm::vec3 result = glm::make_mat4(mat4) * glm::vec4(vec.x, vec.y, vec.z, !isDirection);
   return Vec3(result.x, result.y, result.z);
 }
 static inline Vec3 CalculateNormal(const Vec3& a, const Vec3& b, const Vec3& c) {

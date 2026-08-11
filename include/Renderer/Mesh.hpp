@@ -22,10 +22,13 @@ public:
   static Mesh Pyramid;
   static Mesh Quad;
   static Mesh Cube;
+  static Mesh Cone;
 
   static void InitPrimitives();
   static void SaveAsPrimitive(const string& name, const Mesh& mesh);
   static bool LoadPrimitive(const string& name, Mesh& mesh);
+
+  static Mesh GenerateCone(unsigned int segCount = 3, float height = 1, float radius = .5f);
 
 
   std::vector<Vec3> vertices;

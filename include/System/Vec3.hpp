@@ -77,6 +77,11 @@ public:
     return sqrt(x*x + y*y + z*z);
   }
 
+  inline Vec3 precision(const int precision) {
+    return Vec3((int)(x * precision) / (float)precision, (int)(y * precision) / (float)precision, (int)(z * precision) / (float)precision);
+  }
+
+
   static inline Vec3 cross(const Vec3& a, const Vec3& b) {
     return Vec3(
       a.y * b.z - a.z * b.y,

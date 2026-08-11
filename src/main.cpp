@@ -2,6 +2,8 @@
 #include <User.hpp>
 #include <Renderer.hpp>
 
+#include <UI.hpp>
+
 
 int main(int argc, char* argv[]) {
   System::init();
@@ -12,7 +14,8 @@ int main(int argc, char* argv[]) {
     while(std::optional<Event> eventOpt = window->pollEvent()) {
       const auto& event = *eventOpt;
 
-      User::handle(event);
+      if(UI::Manager::handle(event) == false) User::handle(event);
+
            if(event.is<Event::Closed>()) window->close();
       else if(event.is<Event::Resized>()) Renderer::HandleResize();
     }
@@ -21,6 +24,6 @@ int main(int argc, char* argv[]) {
     Renderer::draw();
   }
 
-  Renderer::clear();
+  System::end();
   return 0;
 }

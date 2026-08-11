@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CompileExe",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-O3", "-flto",
+
+        "-I${workspaceFolder}/include",
+
+        "-o", "${workspaceFolder}/build/program.exe",
+
+        "${workspaceFolder}/src/*.cpp",
+        // "${workspaceFolder}/src/System/*.cpp",
+        "${workspaceFolder}/src/Renderer/*.cpp",
+        "${workspaceFolder}/src/Engine/*.cpp",
+
+        "-Llibs", "-lUI",
+        "-lsfml-graphics", "-lsfml-window", "-lsfml-system", "-lglew32", "-lopengl32"
+      ]
+    },
+    {
+      "label": "Release",
+      "type": "shell",
+      "command": "${workspaceFolder}/assets/Release.bat",
+    },
+    {
+      "label": "Import Tool",
+      "type": "shell",
+      "command": "C:/Users/${env:USERNAME}/OneDrive/Desktop/VsCode/cpp/my/tools/ImportTool.bat ${workspaceFolder}"
+    },
+    {
+      "label": "Create Object Files",
+      "type": "shell",
+      "command": "C:/Users/${env:USERNAME}/OneDrive/Desktop/VsCode/cpp/my/tools/CreateObjectFiles.bat"
+    },
+    {
+      "label": "Create Static Object Files",
+      "type": "shell",
+      "command": "C:/Users/${env:USERNAME}/OneDrive/Desktop/VsCode/cpp/my/tools/CreateStaticObjectFiles.bat"
+    }
+  ]
+}
