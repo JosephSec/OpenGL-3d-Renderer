@@ -13,11 +13,7 @@
         "-o", "${workspaceFolder}/build/program.exe",
 
         "${workspaceFolder}/src/*.cpp",
-        // "${workspaceFolder}/src/System/*.cpp",
-        "${workspaceFolder}/src/Renderer/*.cpp",
-        "${workspaceFolder}/src/Engine/*.cpp",
 
-        "-Llibs", "-lUI",
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system", "-lglew32", "-lopengl32"
       ]
     },

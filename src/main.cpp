@@ -1,29 +1,21 @@
-#include <System.hpp>
-#include <User.hpp>
-#include <Renderer.hpp>
+#include <SFML/Graphics.hpp>
 
-#include <UI.hpp>
+int main(int argc, char *argv[]) {
+  sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({800,600}), "Window");
 
+  while(window.isOpen() == true) {
+    while(const auto &eventOpt = window.pollEvent()) {
+      const auto &event = *eventOpt;
 
-int main(int argc, char* argv[]) {
-  System::init();
-  sf::RenderWindow* window = Renderer::window;
-
-
-  while(window->isOpen()) {
-    while(std::optional<Event> eventOpt = window->pollEvent()) {
-      const auto& event = *eventOpt;
-
-      if(UI::Manager::handle(event) == false) User::handle(event);
-
-           if(event.is<Event::Closed>()) window->close();
-      else if(event.is<Event::Resized>()) Renderer::HandleResize();
+      if(event.is<sf::Event::Closed>()) window.close();
+      else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        if(keyPressed->code == sf::Keyboard::Key::Escape) window.close();
+      }
     }
 
-    System::update();
-    Renderer::draw();
+    window.clear(sf::Color::Black);
+    window.display();
   }
 
-  System::end();
   return 0;
 }
