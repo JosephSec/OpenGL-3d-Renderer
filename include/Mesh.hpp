@@ -39,6 +39,7 @@ public:
 
 
   Mesh(MeshType _type = MeshType::LitTriangle);
+  ~Mesh();
 
   void draw() const;
 };
