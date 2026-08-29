@@ -1,178 +1,113 @@
 #include <System.hpp>
+#include <User.hpp>
+#include <Engine/Renderer.hpp>
+#include <Editor.hpp>
 
-#include <GL/glew.h>
 #include <SFML/Graphics.hpp>
-#include <SFML/OpenGL.hpp>
-
-#include <Renderer/Shader.hpp>
-#include <Mesh.hpp>
 
 #include <iostream>
 
 
-static Shader shader;
-static sf::RenderWindow window;
-static sf::Clock timeClock;
-
-static glm::mat4x4 viewMatrix;
-
-
-struct {
-  glm::ivec2 position;
-  glm::ivec2 delta;
-
-  void update() {
-    const sf::Vector2i curMousePos = sf::Mouse::getPosition(window);
-    delta = glm::ivec2(curMousePos.x, curMousePos.y) - position;
-    position += delta;
-  }
-} Mouse;
-struct {
-  glm::mat4x4 matrix;
-  float nearPlane = .1;
-  float farPlane = 50;
-  float fov = 60;
-} Projection;
-struct {
-  glm::vec3 position;
-  glm::quat rotation;
-  float sensitivity = 10;
-} Camera;
-
-
-static void UpdateProjectionMatrix() {
-  const float aspectRatio = static_cast<float>(window.getSize().x) / static_cast<float>(window.getSize().y);
-  Projection.matrix = glm::perspective(glm::radians(Projection.fov), aspectRatio, Projection.nearPlane, Projection.farPlane);
-}
-static void UpdateViewMatrix() {
-  const glm::mat4x4 rotation = glm::mat4_cast(glm::conjugate(Camera.rotation));
-  const glm::mat4x4 translation = glm::translate(glm::mat4x4(1), glm::vec3(-Camera.position.x,-Camera.position.y,Camera.position.z));
-  viewMatrix = rotation * translation;
-}
-static void HandleResize() {
-  const sf::Vector2u windowSize = window.getSize();
-
-  window.setView(sf::View(sf::FloatRect{{0,0}, sf::Vector2f{window.getSize()}}));
-  glViewport(0,0, windowSize.x, windowSize.y);
-  UpdateProjectionMatrix();
-}
-
-static void initGL() {
-  GLenum err = glewInit();
-  if(err != GLEW_OK) std::cout << "GLEW init error: " << glewGetErrorString(err) << '\n';
-
-  glEnable(GL_DEPTH_TEST);
-
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CW);
-
-  glClearColor(.1,.1,.15, 1);
-}
 static void init() {
   System::init();
+  Renderer::init();
+  User::init();
 
-  sf::ContextSettings settings;
-  settings.depthBits = 24;
-  settings.stencilBits = 8;
-  settings.antiAliasingLevel = 4;
-  settings.majorVersion = 3;
-  settings.minorVersion = 3;
-  settings.attributeFlags = sf::ContextSettings::Default;
-
-  window = sf::RenderWindow(sf::VideoMode{{800,600}}, "Window", sf::State::Windowed, settings);
-  // window.setFramerateLimit(120);
-
-  initGL();
-
-  shader = Shader("UnlitTriangle");
-
-  const sf::Vector2i curMousePos = sf::Mouse::getPosition(window);
-  Mouse.position = glm::ivec2(curMousePos.x, curMousePos.y);
-  Mouse.delta = glm::ivec2(0,0);
-
-  UpdateProjectionMatrix();
-  UpdateViewMatrix();
+  Editor::init();
 }
 
 
 int main(int argc, char *argv[]) {
   init();
 
-  Mesh mesh;
-  mesh.vertices = {
-    Mesh::Vertex{{-.5,-.5,0}, {1,0,0, 1}},
-    Mesh::Vertex{{ .0, .5,0}, {0,1,0, 1}},
-    Mesh::Vertex{{ .5,-.5,0}, {0,0,1, 1}},
-  };
-  mesh.indeces = {0,1,2};
+  MeshRenderer quadRenderer(nullptr, &Renderer::UnlitShader);
+  quadRenderer.backFaceCulling = false;
+  Mesh rgbaQuad; {
+    rgbaQuad.vertices = {
+      Mesh::Vertex{{-.5,-.5,0}, {1,0,0, .5}},
+      Mesh::Vertex{{-.5, .5,0}, {0,1,0, .5}},
+      Mesh::Vertex{{ .5, .5,0}, {0,0,1, .5}},
+      Mesh::Vertex{{ .5,-.5,0}, {1,1,1, .5}},
+    };
+    rgbaQuad.indices = {0,1,2, 0,2,3};
+    
+    quadRenderer.setMesh(&rgbaQuad);
+  }
+
+  MeshRenderer linesRenderer(nullptr, &Renderer::UnlitShader);
+  Mesh rgbLines(MeshType::Lines); {
+    rgbLines.vertices = {
+      Mesh::Vertex{{0,0,0}, {1,0,0, 1}},
+      Mesh::Vertex{{1,0,0}, {1,0,0, 1}},
+
+      Mesh::Vertex{{0,0,0}, {0,1,0, 1}},
+      Mesh::Vertex{{0,1,0}, {0,1,0, 1}},
+
+      Mesh::Vertex{{0,0,0}, {0,0,1, 1}},
+      Mesh::Vertex{{0,0,1}, {0,0,1, 1}},
+    };
+    rgbLines.indices = {0,1, 2,3, 4,5};
+    
+    linesRenderer.setMesh(&rgbLines);
+  }
+
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  //MAKE MESH PRIMITIVES
+  
+  float rotation = 0;
 
 
-  while(window.isOpen()) {
-    while(const auto &eventOpt = window.pollEvent()) {
+  while(Renderer::window.isOpen()) {
+    while(const auto &eventOpt = Renderer::window.pollEvent()) {
       const auto &event = *eventOpt;
 
-      if(event.is<sf::Event::Closed>()) window.close();
-      else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) {
-        if(keyPressed->code == sf::Keyboard::Key::Escape) window.close();
-      }
-      else if(const auto *resized = event.getIf<sf::Event::Resized>()) {
-        HandleResize();
-      }
+      if(event.is<sf::Event::Closed>()) Renderer::window.close();
+      else if(event.is<sf::Event::KeyPressed>()) User::HandleEvent(event);
+      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::HandleResize();
     }
 
 
     { //Update
-      Mouse.update();
+      System::update();
+      User::Mouse::update();
+      Editor::update();
 
-      const float deltaTime = timeClock.restart().asSeconds();
-
-      if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-        glm::vec3 moveDir = glm::vec3(0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir += glm::vec3(0,0,1);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir -= glm::vec3(0,0,1);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
-        if(glm::length(moveDir) != 0) Camera.position += (glm::conjugate(Camera.rotation) * moveDir) * deltaTime;
-
-        if(glm::length(glm::vec2(Mouse.delta)) != 0) {
-          const glm::vec2 lookDelta = -glm::vec2(Mouse.delta) * Camera.sensitivity * deltaTime;
-
-          Camera.rotation = Camera.rotation * glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
-          Camera.rotation = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0)) * Camera.rotation;
-          Camera.rotation = glm::normalize(Camera.rotation);
-        }
-
-        UpdateViewMatrix();
-      }
-
-      static bool prev_x_state = false;
-      const bool cur_x_state = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
-      if((prev_x_state != cur_x_state) && cur_x_state == true) {
-        std::stringstream ss;
-        ss << "Camera Position: (" << Camera.position.x << ", " << Camera.position.y << ", " << Camera.position.z << ")\n";
-        ss << "Camera Rotation:\n" << PrintMatrix(glm::mat4_cast(Camera.rotation)) << '\n';
-        std::cout << ss.str();
-      }
-      prev_x_state = cur_x_state;
+      rotation += System::deltaTime;
     }
 
     { //Render
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
-      glUseProgram(shader);
-      shader.SetUniform("projection", Projection.matrix);
-      shader.SetUniform("view", viewMatrix);
-      shader.SetUniform("model", glm::mat4x4(1));
-      mesh.draw();
+      glUseProgram(Renderer::UnlitShader);
+
+      Editor::draw();
+
+      const int16_t GRID_SIZE = 10;
+      const float MID_HEIGHT = 10;
+      for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
+        for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
+          const float height = (1 - glm::length(glm::vec2(x,z)) / static_cast<float>(GRID_SIZE)) * MID_HEIGHT + .1;
+
+          quadRenderer.draw(Transform(glm::vec3(x,0,z), glm::rotate(glm::mat4x4(1), rotation, glm::vec3(0,1,0)), glm::vec3(1,height,1)).getMatrix());
+        }
+      }
+
+      // linesRenderer.draw(glm::mat4x4(1));
   
-      window.display();
+      Renderer::window.display();
     }
   }
 
-  glDeleteProgram(shader);
+  glDeleteProgram(Renderer::UnlitShader);
 
   return 0;
 }

@@ -2,7 +2,26 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "CompileExe",
+      "label": "Compile Exe",
+      "type": "shell",
+      "command": "g++",
+      "args": [        
+        "-I${workspaceFolder}/include",
+        "${workspaceFolder}/src/*.cpp",
+        
+        "-O3", "-flto",
+        "-o", "${workspaceFolder}/build/program.exe",
+        
+        "${workspaceFolder}/src/Engine/*.cpp",
+        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
+        // "${workspaceFolder}/bin/zengine.dll",
+        
+        "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
+        "-lglew32", "-lopengl32",
+      ]
+    },
+    {
+      "label": "Compile DLL",
       "type": "shell",
       "command": "g++",
       "args": [
@@ -10,18 +29,25 @@
 
         "-I${workspaceFolder}/include",
 
-        "-o", "${workspaceFolder}/build/program.exe",
+        "-shared",
+        "-o",
 
-        "${workspaceFolder}/src/*.cpp",
-        "${workspaceFolder}/src/Renderer/*.cpp",
+        "${workspaceFolder}/bin/zengine.dll",
+
+        "${workspaceFolder}/src/Engine/*.cpp",
+        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
 
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system", "-lglew32", "-lopengl32"
-      ]
+      ],
     },
     {
-      "label": "Release",
+      "label": "Publish Engine Files",
       "type": "shell",
-      "command": "${workspaceFolder}/assets/Release.bat",
+      "command": "${workspaceFolder}/assets/UpdateGlobalFiles.bat",
+      "args": [
+        "ZEngine", "Engine"
+      ],
+      "dependsOn": ["Compile DLL"]
     },
     {
       "label": "Import Tool",

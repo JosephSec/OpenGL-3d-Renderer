@@ -8,16 +8,7 @@
       "cwd": "${workspaceFolder}",
       "program": "${workspaceFolder}/build/program.exe",
       "externalConsole": true,
-      "preLaunchTask": "CompileExe",
-    },
-    {
-      "name": "Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "program": "${workspaceFolder}/release/assets/program.exe",
-      "externalConsole": true,
-      "preLaunchTask": "Release",
+      "preLaunchTask": "Compile Exe",
     }
   ]
 }

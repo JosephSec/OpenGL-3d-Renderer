@@ -31,7 +31,7 @@ public:
   MeshType type;
 
   std::vector<Vertex> vertices;
-  std::vector<unsigned int> indeces;
+  std::vector<unsigned int> indices;
 
   GLuint vao;
   GLuint vbo;
@@ -40,6 +40,4 @@ public:
 
   Mesh(MeshType _type = MeshType::LitTriangle);
   ~Mesh();
-
-  void draw() const;
 };
