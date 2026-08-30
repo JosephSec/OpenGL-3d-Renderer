@@ -1,12 +1,14 @@
 #include <Engine/Renderer.hpp>
-#include <System.hpp>
 
 #include <format>
 
+#include <iostream>
 
-sf::RenderWindow Renderer::window;
+
+sf::RenderWindow *Renderer::window;
 glm::ivec2 Renderer::windowSize;
 
+bool Renderer::wireframeMode = false;
 Shader Renderer::UnlitShader;
 
 Camera *Renderer::camera;
@@ -38,21 +40,34 @@ void Renderer::init() {
   settings.minorVersion = 3;
   settings.attributeFlags = sf::ContextSettings::Default;
 
-  window = sf::RenderWindow(sf::VideoMode{{800,600}}, "OpenGL 3d Renderer", sf::State::Windowed, settings);
-  window.setVerticalSyncEnabled(true);
-  // window.setFramerateLimit(60);
+  window = new sf::RenderWindow(sf::VideoMode{{800,600}}, "OpenGL 3d Renderer", sf::State::Windowed, settings);
+  window->setVerticalSyncEnabled(true);
+  // window->setFramerateLimit(60);
 
   initGL();
 
   UnlitShader = Shader("Unlit");
 }
 void Renderer::update() {}
-void Renderer::draw() {}
+void Renderer::end() {
+  glDeleteProgram(Renderer::UnlitShader);
+  delete Renderer::window;  
+}
+
+void Renderer::clear() {
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+void Renderer::SetShader(GLuint _program) {
+  glUseProgram(_program);
+}
+void Renderer::display() {
+  window->display();
+}
 
 
 void Renderer::UpdateProjectionMatrix() {
   if(camera == nullptr) {
-    std::cout << "[Renderer Error] Cannot update projection matrix: Camera is nullptr\n";
+    std::cout << "[Renderer Error]: Cannot update projection matrix: Camera is nullptr\n";
     return;
   }
 
@@ -62,7 +77,7 @@ void Renderer::UpdateProjectionMatrix() {
 }
 void Renderer::UpdateViewMatrix() {
   if(camera == nullptr) {
-    std::cout << "[Renderer Error] Cannot update view matrix: Camera is nullptr\n";
+    std::cout << "[Renderer Error]: Cannot update view matrix: Camera is nullptr\n";
     return;
   }
 
@@ -71,10 +86,15 @@ void Renderer::UpdateViewMatrix() {
   glUseProgram(0);
 }
 void Renderer::HandleResize() {
-  const sf::Vector2u sf_windowSize = window.getSize();
+  const sf::Vector2u sf_windowSize = window->getSize();
   windowSize = glm::ivec2(sf_windowSize.x, sf_windowSize.y);
 
-  window.setView(sf::View(sf::FloatRect{{0,0}, sf::Vector2f{sf_windowSize}}));
+  window->setView(sf::View(sf::FloatRect{{0,0}, sf::Vector2f{sf_windowSize}}));
   glViewport(0,0, windowSize.x, windowSize.y);
   UpdateProjectionMatrix();
+}
+
+void Renderer::ToggleWireframeMode(bool _enable) {
+  wireframeMode = _enable;
+  glPolygonMode(GL_FRONT_AND_BACK, _enable? GL_LINE : GL_FILL);
 }

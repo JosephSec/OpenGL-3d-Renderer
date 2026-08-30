@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -8,8 +10,8 @@
 #include <vector>
 
 #ifndef M_PI
-#define M_PI 3.141592653589
-#define M_PI_2 M_PI * 2
+#define M_PI 3.141592653589 ZENGINE_API 
+#define M_PI_2 M_PI * 2 ZENGINE_API 
 #endif
 
 
@@ -17,7 +19,7 @@ enum MeshType : uint8_t {
   LitTriangle,
   Lines,
 };
-class Mesh {
+class ZENGINE_API Mesh {
 public:
   struct Vertex {
   public:

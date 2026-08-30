@@ -1,9 +1,11 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <Engine/Transform.hpp>
 
 
-class Camera {
+class ZENGINE_API Camera {
 public:
   Camera(const glm::vec3 _pos = glm::vec3(0), const glm::quat _rotation = glm::quat());
 

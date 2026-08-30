@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <SFML/Graphics/RenderWindow.hpp>
 
 #include <Engine/Renderer/Shader.hpp>
@@ -8,11 +10,12 @@
 #include <Engine/Renderer/Camera.hpp>
 
 
-class Renderer {
+class ZENGINE_API Renderer {
 public:
-  static sf::RenderWindow window;
+  static sf::RenderWindow *window;
   static glm::ivec2 windowSize;
 
+  static bool wireframeMode;
   static Shader UnlitShader;
 
   static Camera *camera;
@@ -22,10 +25,16 @@ public:
 
   static void init();
   static void update();
-  static void draw();
+  static void end();
+
+  static void clear();
+  static void SetShader(GLuint _program);
+  static void display();
 
 
   static void UpdateProjectionMatrix();
   static void UpdateViewMatrix();
   static void HandleResize();
+
+  static void ToggleWireframeMode(bool _enable = !wireframeMode);
 };

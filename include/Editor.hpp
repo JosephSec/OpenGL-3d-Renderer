@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 #include <Engine/Renderer/Camera.hpp>
 #include <Engine/Renderer/MeshRenderer.hpp>
 
@@ -18,4 +20,7 @@ public:
   static void init();
   static void update();
   static void draw();
+
+  static void SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path);
+  static bool LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path);
 };

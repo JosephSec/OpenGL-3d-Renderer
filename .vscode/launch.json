@@ -2,13 +2,44 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Build",
+      "name": "Build (CPP)",
       "type": "cppdbg",
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "program": "${workspaceFolder}/build/program.exe",
       "externalConsole": true,
-      "preLaunchTask": "Compile Exe",
+      "preLaunchTask": "Compile Exe (CPP)",
+    },
+    {
+      "name": "Build (DLL)",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/build/program.exe", 
+      "externalConsole": true,
+      "preLaunchTask": "Compile Exe (DLL)",
+      "environment": [
+        {
+          "name": "PATH",
+          "value": "${workspaceFolder}/bin;${env:PATH}"
+        }
+      ]
+    },
+    {
+      "name": "Build (DLL-Skip)",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/build/program.exe", 
+      "externalConsole": true,
+      "preLaunchTask": "Compile Exe (DLL-Skip)",
+      "environment": [
+        {
+          "name": "PATH",
+          "value": "${workspaceFolder}\\bin;${env:PATH}"
+        }
+      ],
+      "MIMode": "gdb"
     }
   ]
 }

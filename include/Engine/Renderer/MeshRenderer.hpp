@@ -1,11 +1,13 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <GL/glew.h>
 #include <Engine/Renderer/Mesh.hpp>
 #include <Engine/Renderer/Shader.hpp>
 
 
-class MeshRenderer {
+class ZENGINE_API MeshRenderer {
 public:
   MeshRenderer() {}
   MeshRenderer(Mesh *_mesh, Shader *_shader);

@@ -2,10 +2,10 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Compile Exe",
+      "label": "Compile Exe (CPP)",
       "type": "shell",
       "command": "g++",
-      "args": [        
+      "args": [
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
         
@@ -14,30 +14,65 @@
         
         "${workspaceFolder}/src/Engine/*.cpp",
         "${workspaceFolder}/src/Engine/Renderer/*.cpp",
-        // "${workspaceFolder}/bin/zengine.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
       ]
     },
     {
+      "label": "Compile Exe (DLL)",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-DZENGINE_DLL",
+
+        "-I${workspaceFolder}/include",
+        "${workspaceFolder}/src/*.cpp",
+
+        "-O3", "-flto",
+        "-o", "${workspaceFolder}/build/program.exe",
+        
+        "${workspaceFolder}/bin/zengine.dll",
+        
+        "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
+      ],
+      "dependsOn": ["Compile DLL"]
+    },
+    {
+      "label": "Compile Exe (DLL-Skip)",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-DZENGINE_DLL",
+
+        "-I${workspaceFolder}/include",
+        "${workspaceFolder}/src/*.cpp",
+
+        "-O3", "-flto",
+        "-o", "${workspaceFolder}/build/program.exe",
+        
+        "${workspaceFolder}/bin/zengine.dll",
+        
+        "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
+      ],
+    },
+    {
       "label": "Compile DLL",
       "type": "shell",
       "command": "g++",
       "args": [
-        "-O3", "-flto",
-
-        "-I${workspaceFolder}/include",
-
-        "-shared",
-        "-o",
-
-        "${workspaceFolder}/bin/zengine.dll",
+        "-DZENGINE_DLL_BUILD",
 
         "${workspaceFolder}/src/Engine/*.cpp",
         "${workspaceFolder}/src/Engine/Renderer/*.cpp",
+        
+        "-O3", "-flto",
+        "-I${workspaceFolder}/include",
 
-        "-lsfml-graphics", "-lsfml-window", "-lsfml-system", "-lglew32", "-lopengl32"
+        "-shared", "-o", "${workspaceFolder}/bin/zengine.dll",
+        
+        "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
+        "-lglew32", "-lopengl32",
       ],
     },
     {

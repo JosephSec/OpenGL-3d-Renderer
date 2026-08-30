@@ -2,6 +2,8 @@
 
 
 MeshRenderer::MeshRenderer(Mesh *_mesh, Shader *_shader) {
+  if(glGenBuffers == nullptr) return;
+
   glGenVertexArrays(1, &vao);
 
   setMesh(_mesh);

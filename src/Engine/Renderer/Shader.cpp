@@ -1,8 +1,9 @@
 #include <Engine/Renderer/Shader.hpp>
-#include <System.hpp>
 
 #include <fstream>
 #include <sstream>
+
+#include <iostream>
 
 
 Shader::Shader(const std::string& _name) {

@@ -1,12 +1,14 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 
-class Transform {
+class ZENGINE_API Transform {
 public:
   Transform(
     const glm::vec3 _pos = glm::vec3(0),

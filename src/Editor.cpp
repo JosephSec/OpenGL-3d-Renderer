@@ -3,6 +3,10 @@
 #include <User.hpp>
 #include <Engine/Renderer.hpp>
 
+#include <fstream>
+
+#include <iostream>
+
 
 Camera Editor::camera;
 float Editor::sensitivity = 1;
@@ -72,4 +76,53 @@ void Editor::update() {
 }
 void Editor::draw() {
   worldGridRenderer.draw(glm::mat4x4(1));
+}
+
+void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path) {
+  if(std::filesystem::exists(_path.parent_path()) == false) {
+    std::filesystem::create_directories(_path.parent_path());
+  }
+
+  std::ofstream file(_path, std::ios::binary);
+  if(!file.is_open()) {
+    std::cout << "[Editor Error]: Failed to open file for writing: " << _path.string() << '\n';
+    return;
+  }
+
+  const uint32_t vertexCount = static_cast<uint32_t>(_mesh.vertices.size());
+  const uint32_t indexCount = static_cast<uint32_t>(_mesh.indices.size());
+
+  file.write(reinterpret_cast<const char*>(&vertexCount), sizeof(vertexCount));
+  file.write(reinterpret_cast<const char*>(_mesh.vertices.data()), sizeof(Mesh::Vertex) * vertexCount);
+
+  file.write(reinterpret_cast<const char*>(&indexCount), sizeof(indexCount));
+  file.write(reinterpret_cast<const char*>(_mesh.indices.data()), sizeof(uint32_t) * indexCount);
+
+  file.close();
+}
+bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path) {
+  if(std::filesystem::exists(_path) == false) {
+    std::cout << "[Editor Error]: File does not exist: " << _path.string() << '\n';
+    return false;
+  }
+
+  std::ifstream file(_path, std::ios::binary);
+  if(!file.is_open()) {
+    std::cout << "[Editor Error]: Failed to open file for reading: " << _path.string() << '\n';
+    return false;
+  }
+
+  uint32_t vertexCount = 0;
+  uint32_t indexCount = 0;
+
+  file.read(reinterpret_cast<char*>(&vertexCount), sizeof(vertexCount));
+  _mesh.vertices.resize(vertexCount);
+  file.read(reinterpret_cast<char*>(_mesh.vertices.data()), sizeof(Mesh::Vertex) * vertexCount);
+
+  file.read(reinterpret_cast<char*>(&indexCount), sizeof(indexCount));
+  _mesh.indices.resize(indexCount);
+  file.read(reinterpret_cast<char*>(_mesh.indices.data()), sizeof(uint32_t) * indexCount);
+
+  file.close();
+  return true;
 }
