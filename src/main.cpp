@@ -20,8 +20,6 @@ static void init() {
 int main(int argc, char *argv[]) {
   init();
 
-  MeshRenderer primitiveRenderer(nullptr, &Renderer::UnlitShader);
-  primitiveRenderer.backFaceCulling = true;
 
   const std::vector<glm::vec4> colors = {
     {1,0,0, 1},
@@ -31,38 +29,20 @@ int main(int argc, char *argv[]) {
     {0,0,0, 1},
   };
 
+  MeshRenderer primitiveRenderer(nullptr, &Renderer::UnlitShader);
+  primitiveRenderer.backFaceCulling = true;
+
+  const std::filesystem::path primitiveMeshPath = std::filesystem::path(System::PATH)/"assets"/"meshes"/"pyramid.mesh";
   Mesh primitiveMesh; {
-    // Editor::LoadMeshPrimitive(primitiveMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"cube.mesh");
-
-    primitiveMesh.vertices = {
-      Mesh::Vertex{{-.5,-.5, .5}, {1,1,1, 1}},
-      Mesh::Vertex{{-.5, .5, .5}, {1,1,1, 1}},
-      Mesh::Vertex{{ .5, .5, .5}, {1,1,1, 1}},
-      Mesh::Vertex{{ .5,-.5, .5}, {1,1,1, 1}},
-      
-      Mesh::Vertex{{-.5,-.5,-.5}, {1,1,1, 1}},
-      Mesh::Vertex{{-.5, .5,-.5}, {1,1,1, 1}},
-      Mesh::Vertex{{ .5, .5,-.5}, {1,1,1, 1}},
-      Mesh::Vertex{{ .5,-.5,-.5}, {1,1,1, 1}},
-    };
-    primitiveMesh.indices = {
-      0,1,2, 0,2,3, //+z
-      7,6,5, 7,5,4, //-z
-
-      2,6,7, 2,7,3, //+x
-      0,4,5, 0,5,1, //-x
-
-      1,5,6, 1,6,2, //+y
-      0,3,7, 0,7,4, //-y
-    };
+    Editor::LoadMeshPrimitive(primitiveMesh, primitiveMeshPath);
 
     for(int i = 0; i < primitiveMesh.vertices.size(); i++) {
       primitiveMesh.vertices[i].color = colors[i % colors.size()];
     }
-    
+  
     primitiveRenderer.setMesh(&primitiveMesh);
   }
-  Editor::SaveMeshPrimitive(primitiveMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"cube.mesh");
+  // Editor::SaveMeshPrimitive(primitiveMesh, primitiveMeshPath);
 
   MeshRenderer linesRenderer(nullptr, &Renderer::UnlitShader);
   Mesh rgbLines(MeshType::Lines); {
@@ -80,6 +60,7 @@ int main(int argc, char *argv[]) {
     
     linesRenderer.setMesh(&rgbLines);
   }
+
 
   float animationT = 0;
 
@@ -109,23 +90,22 @@ int main(int argc, char *argv[]) {
 
       Editor::draw();
 
-      primitiveRenderer.draw(Transform().getMatrix());
+      // primitiveRenderer.draw(glm::mat4x4(1));
 
-      // const int16_t GRID_SIZE = 10;
-      // const float MID_HEIGHT = 10;
-      // for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
-      //   for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
-      //     // const float height = (1 - glm::length(glm::vec2(x,z)) / static_cast<float>(GRID_SIZE)) * MID_HEIGHT + .1;
-      //     const float height = 1;
-      //     const float a = glm::cos(static_cast<float>(x));
-      //     const float b = glm::cos(static_cast<float>(z));
-      //     const float c = glm::cos(animationT);
-      //     const float maxAngle = 90;
-      //     const float angle = glm::radians((90 + (c * a * b) * maxAngle) * c);
+      const int16_t GRID_SIZE = 10;
+      const float MID_HEIGHT = 10;
+      for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
+        for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
+          const float a = glm::cos(static_cast<float>(x));
+          const float b = glm::cos(static_cast<float>(z));
+          const float c = glm::cos(animationT);
+          const float maxAngle = 180;
+          const float startAngle = 90;
+          const float angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
 
-      //     primitiveRenderer.draw(Transform(glm::vec3(x,0,z), glm::rotate(glm::mat4x4(1), angle, glm::vec3(1,0,0)), glm::vec3(1,height,1)).getMatrix());
-      //   }
-      // }
+          primitiveRenderer.draw(Transform(glm::vec3(x,0,z), glm::rotate(glm::mat4x4(1), angle, glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
+        }
+      }
 
       // linesRenderer.draw(glm::mat4x4(1));
 

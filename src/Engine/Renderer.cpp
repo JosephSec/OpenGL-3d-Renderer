@@ -65,6 +65,10 @@ void Renderer::display() {
 }
 
 
+void Renderer::SetCamera(Camera *_camera) {
+  camera = _camera;
+  UpdateViewMatrix();
+}
 void Renderer::UpdateProjectionMatrix() {
   if(camera == nullptr) {
     std::cout << "[Renderer Error]: Cannot update projection matrix: Camera is nullptr\n";

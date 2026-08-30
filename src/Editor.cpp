@@ -10,15 +10,18 @@
 
 Camera Editor::camera;
 float Editor::sensitivity = 1;
-float Editor::slowModeSpeed = 1;
-float Editor::fastModeSpeed = 5;
+float Editor::slowModeSpeed = 5;
+float Editor::fastModeSpeed = 10;
 
 MeshRenderer Editor::worldGridRenderer;
 Mesh Editor::worldGridMesh;
 
+std::vector<Camera*> Editor::cameras;
+
 
 void Editor::init() {
   Renderer::camera = &camera;
+  cameras.push_back(&camera);
 
   Renderer::HandleResize();
   Renderer::UpdateProjectionMatrix();
@@ -26,14 +29,6 @@ void Editor::init() {
 
   worldGridRenderer = MeshRenderer(nullptr, &Renderer::UnlitShader);
   worldGridMesh = Mesh(MeshType::Lines); {
-    worldGridMesh.vertices = {
-      Mesh::Vertex{{-20,0,0}, {1,1,1, .5}},
-      Mesh::Vertex{{ 20,0,0}, {1,1,1, .5}},
-
-      Mesh::Vertex{{0,0,-20}, {1,1,1, .5}},
-      Mesh::Vertex{{0,0, 20}, {1,1,1, .5}},
-    };
-
     const int16_t GRID_SIZE = 20;
     for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
       const float alpha = ((i % 10) == 0)? .5f : .25f;
@@ -76,6 +71,25 @@ void Editor::update() {
 }
 void Editor::draw() {
   worldGridRenderer.draw(glm::mat4x4(1));
+
+  Mesh cubeMesh;
+  LoadMeshPrimitive(cubeMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"cube.mesh");
+  MeshRenderer cubeRenderer(&cubeMesh, &Renderer::UnlitShader);
+  
+  Mesh lineMesh(MeshType::Lines); {
+    lineMesh.vertices = {
+      Mesh::Vertex{{0,0,0}, {1,0,0, 1}},
+      Mesh::Vertex{{0,0,-1}, {1,0,0, 1}},
+    };
+    lineMesh.indices = {0,1};
+  }
+  MeshRenderer lineRenderer(&lineMesh, &Renderer::UnlitShader);
+
+
+  for(const Camera *_camera : cameras) {
+    cubeRenderer.draw(_camera->transform.getMatrix());
+    lineRenderer.draw(_camera->transform.getMatrix());
+  }
 }
 
 void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path) {

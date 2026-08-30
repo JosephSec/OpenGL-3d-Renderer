@@ -32,6 +32,7 @@ public:
   static void display();
 
 
+  static void SetCamera(Camera *_camera);
   static void UpdateProjectionMatrix();
   static void UpdateViewMatrix();
   static void HandleResize();

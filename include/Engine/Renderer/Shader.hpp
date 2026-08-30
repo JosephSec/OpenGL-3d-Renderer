@@ -24,28 +24,31 @@ public:
     return program;
   }
 
-  void SetUniform(const std::string& _uniform, const glm::mat3& matrix) const {
+  void SetUniform(const std::string &_uniform, const glm::mat3 &matrix) const {
     glUniformMatrix3fv(glGetUniformLocation(program, _uniform.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
   }
-  void SetUniform(const std::string& _uniform, const glm::mat4& matrix) const {
+  void SetUniform(const std::string &_uniform, const glm::mat4 &matrix) const {
     glUniformMatrix4fv(glGetUniformLocation(program, _uniform.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
   }
-  void SetUniform(const std::string& _uniform, const int& val) const {
+  void SetUniform(const std::string &_uniform, bool _val) const {
+    glUniform1i(glGetUniformLocation(program, _uniform.c_str()), _val);
+  }
+  void SetUniform(const std::string &_uniform, const int val) const {
     glUniform1i(glGetUniformLocation(program, _uniform.c_str()), val);
   }
-  void SetUniform(const std::string& _uniform, const float& val) const {
+  void SetUniform(const std::string &_uniform, const float val )const {
     glUniform1f(glGetUniformLocation(program, _uniform.c_str()), val);
   }
-  void SetUniform(const std::string& _uniform, const glm::vec2& vec) const {
+  void SetUniform(const std::string &_uniform, const glm::vec2 vec) const {
     glUniform2f(glGetUniformLocation(program, _uniform.c_str()), vec.x, vec.y);
   }
-  void SetUniform(const std::string& _uniform, const glm::vec3& vec) const {
+  void SetUniform(const std::string &_uniform, const glm::vec3 vec) const {
     glUniform3f(glGetUniformLocation(program, _uniform.c_str()), vec.x, vec.y, vec.z);
   }
-  void SetUniform(const std::string& _uniform, const glm::vec4& vec) const {
+  void SetUniform(const std::string &_uniform, const glm::vec4 vec) const {
     glUniform4f(glGetUniformLocation(program, _uniform.c_str()), vec.x, vec.y, vec.z, vec.w);
   }
-  void SetUniform(const std::string& _uniform, const sf::Color& clr) const {
+  void SetUniform(const std::string &_uniform, const sf::Color clr) const {
     glUniform4f(glGetUniformLocation(program, _uniform.c_str()), clr.r/255.0f, clr.g/255.0f, clr.b/255.0f, clr.a/255.0f);
   }
 

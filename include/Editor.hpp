@@ -16,6 +16,8 @@ public:
   static MeshRenderer worldGridRenderer;
   static Mesh worldGridMesh;
 
+  static std::vector<Camera*> cameras;
+
 
   static void init();
   static void update();
