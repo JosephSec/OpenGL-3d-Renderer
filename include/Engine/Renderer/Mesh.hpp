@@ -5,14 +5,10 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <glm/gtc/constants.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <GL/glew.h>
 #include <vector>
-
-#ifndef M_PI
-#define M_PI 3.141592653589 ZENGINE_API 
-#define M_PI_2 M_PI * 2 ZENGINE_API 
-#endif
 
 
 enum MeshType : uint8_t {

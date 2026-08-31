@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   MeshRenderer primitiveRenderer(nullptr, &Renderer::UnlitShader);
   primitiveRenderer.backFaceCulling = true;
 
-  const std::filesystem::path primitiveMeshPath = std::filesystem::path(System::PATH)/"assets"/"meshes"/"pyramid.mesh";
+  const std::filesystem::path primitiveMeshPath = std::filesystem::path(System::PATH)/"assets"/"meshes"/"cube.mesh";
   Mesh primitiveMesh; {
     Editor::LoadMeshPrimitive(primitiveMesh, primitiveMeshPath);
 
@@ -44,23 +44,19 @@ int main(int argc, char *argv[]) {
   }
   // Editor::SaveMeshPrimitive(primitiveMesh, primitiveMeshPath);
 
-  MeshRenderer linesRenderer(nullptr, &Renderer::UnlitShader);
-  Mesh rgbLines(MeshType::Lines); {
-    rgbLines.vertices = {
-      Mesh::Vertex{{0,0,0}, {1,0,0, 1}},
-      Mesh::Vertex{{1,0,0}, {1,0,0, 1}},
-
-      Mesh::Vertex{{0,0,0}, {0,1,0, 1}},
-      Mesh::Vertex{{0,1,0}, {0,1,0, 1}},
-
-      Mesh::Vertex{{0,0,0}, {0,0,1, 1}},
-      Mesh::Vertex{{0,0,1}, {0,0,1, 1}},
-    };
-    rgbLines.indices = {0,1, 2,3, 4,5};
-    
-    linesRenderer.setMesh(&rgbLines);
+  MeshRenderer circleMeshRenderer(nullptr, &Renderer::UnlitShader);
+  Mesh circleMesh; {
+    Editor::LoadMeshPrimitive(circleMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"circle.mesh");
+    for(int i = 0; i < circleMesh.vertices.size(); i++) circleMesh.vertices[i].color = {1,0,0,1};
+    circleMeshRenderer.setMesh(&circleMesh);
   }
 
+
+  MeshRenderer groundMeshRenderer(nullptr, &Renderer::UnlitShader);
+  Mesh groundMesh; {
+    Editor::LoadMeshPrimitive(groundMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"quad.mesh");
+    groundMeshRenderer.setMesh(&groundMesh);
+  }
 
   float animationT = 0;
 
@@ -80,7 +76,7 @@ int main(int argc, char *argv[]) {
       User::Mouse::update();
       Editor::update();
 
-      animationT += System::deltaTime;
+      animationT += System::deltaTime * .1;
     }
 
     { //Render
@@ -90,30 +86,44 @@ int main(int argc, char *argv[]) {
 
       Editor::draw();
 
-      // primitiveRenderer.draw(glm::mat4x4(1));
+      primitiveRenderer.draw(glm::mat4x4(1));
 
-      const int16_t GRID_SIZE = 10;
-      const float MID_HEIGHT = 10;
-      for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
-        for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
-          const float a = glm::cos(static_cast<float>(x));
-          const float b = glm::cos(static_cast<float>(z));
-          const float c = glm::cos(animationT);
-          const float maxAngle = 180;
-          const float startAngle = 90;
-          const float angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
+      // const glm::quat rotation = Renderer::camera->transform.rotation;
+      // for(int i = 0; i < primitiveMesh.vertices.size(); i++) {
+      //   const glm::vec3 vertPosition = primitiveMesh.vertices[i].position;
+      //   const glm::quat rotation = glm::quatLookAt(glm::normalize(vertPosition - Renderer::camera->transform.position), glm::vec3(0,1,0));
+      //   circleMeshRenderer.draw(Transform(vertPosition, rotation, glm::vec3(.1)).getMatrix());
+      // }
 
-          primitiveRenderer.draw(Transform(glm::vec3(x,0,z), glm::rotate(glm::mat4x4(1), angle, glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
+      const glm::vec3 size = glm::vec3(30 + glm::cos(animationT) * 10, 30 + glm::cos(animationT) * 10, 1);
+      groundMeshRenderer.draw(Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), size).getMatrix());
+
+      if(true) { //Weird Grid
+        const int16_t GRID_SIZE = 25;
+        for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
+          for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
+            const double a = glm::cos(static_cast<float>(x));
+            const double b = glm::cos(static_cast<float>(z));
+            const double c = glm::cos(animationT);
+            const double maxAngle = 180;
+            const double startAngle = 90;
+            const double angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
+
+            const glm::vec3 position = 
+              glm::angleAxis(animationT * (x * z) * System::deltaTime * System::deltaTime, glm::vec3(1,0,0)) *
+              // glm::angleAxis(animationT, glm::vec3(0,1,0)) *
+              glm::vec3(x,0,z);
+            primitiveRenderer.draw(Transform(position, glm::rotate(glm::mat4x4(1), static_cast<float>(angle), glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
+          }
         }
       }
-
-      // linesRenderer.draw(glm::mat4x4(1));
 
       Renderer::display();
     }
   }
 
   Renderer::end();
+  Editor::end();
 
   return 0;
 }

@@ -40,7 +40,7 @@ void User::HandleEvent(const sf::Event &_event) {
       Renderer::ToggleWireframeMode(!Renderer::wireframeMode);
     }
     else if(keyPressed->code == sf::Keyboard::Key::Space) {
-      Editor::cameras.push_back(new Camera(Editor::camera));
+      Editor::cameras.push_back(new Camera(*Editor::camera));
     }
     else if(keyPressed->code == sf::Keyboard::Key::Left) {
       for(int i = 0; i < Editor::cameras.size(); i++) {

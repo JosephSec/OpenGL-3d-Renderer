@@ -8,10 +8,10 @@
 #include <iostream>
 
 
-Camera Editor::camera;
+Camera *Editor::camera;
 float Editor::sensitivity = 1;
-float Editor::slowModeSpeed = 5;
-float Editor::fastModeSpeed = 10;
+float Editor::slowModeSpeed = 10;
+float Editor::fastModeSpeed = 20;
 
 MeshRenderer Editor::worldGridRenderer;
 Mesh Editor::worldGridMesh;
@@ -20,8 +20,12 @@ std::vector<Camera*> Editor::cameras;
 
 
 void Editor::init() {
-  Renderer::camera = &camera;
-  cameras.push_back(&camera);
+  camera = new Camera();
+  camera->farPlane = 500;
+  camera->fov = 90;
+
+  Renderer::camera = camera;
+  cameras.push_back(Renderer::camera);
 
   Renderer::HandleResize();
   Renderer::UpdateProjectionMatrix();
@@ -30,16 +34,20 @@ void Editor::init() {
   worldGridRenderer = MeshRenderer(nullptr, &Renderer::UnlitShader);
   worldGridMesh = Mesh(MeshType::Lines); {
     const int16_t GRID_SIZE = 20;
+    
     for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
       const float alpha = ((i % 10) == 0)? .5f : .25f;
 
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{-20,0,i}, {1,1,1, alpha}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{ 20,0,i}, {1,1,1, alpha}});
-      
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0,-20}, {1,1,1, alpha}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0, 20}, {1,1,1, alpha}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{-GRID_SIZE,0,i}, {1,1,1, alpha}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{ GRID_SIZE,0,i}, {1,1,1, alpha}});
+
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0,-GRID_SIZE}, {1,1,1, alpha}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0, GRID_SIZE}, {1,1,1, alpha}});
     }
-    for(int i = 0; i < worldGridMesh.vertices.size(); i++) worldGridMesh.indices.push_back(i);
+
+    const uint32_t vertexCount = worldGridMesh.vertices.size();
+    worldGridMesh.indices.resize(vertexCount);
+    for(int i = 0; i < vertexCount; i++) worldGridMesh.indices[i] = i;
     
     worldGridRenderer.setMesh(&worldGridMesh);
   }
@@ -55,7 +63,7 @@ void Editor::update() {
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
     if(glm::length(moveDir) != 0) {
       const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
-      camera.transform.position += (camera.transform.rotation * glm::normalize(moveDir)) * speed;
+      camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
     }
 
     if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
@@ -63,7 +71,7 @@ void Editor::update() {
 
       const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
       const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-      camera.transform.rotation = glm::normalize(yaw * camera.transform.rotation * pitch);
+      camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
     }
 
     Renderer::UpdateViewMatrix();
@@ -90,6 +98,9 @@ void Editor::draw() {
     cubeRenderer.draw(_camera->transform.getMatrix());
     lineRenderer.draw(_camera->transform.getMatrix());
   }
+}
+void Editor::end() {
+  for(Camera *cameraPtr : cameras) delete cameraPtr;
 }
 
 void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path) {

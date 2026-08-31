@@ -8,7 +8,7 @@
 
 class Editor {
 public:
-  static Camera camera;
+  static Camera *camera;
   static float sensitivity;
   static float slowModeSpeed;
   static float fastModeSpeed;
@@ -22,6 +22,7 @@ public:
   static void init();
   static void update();
   static void draw();
+  static void end();
 
   static void SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path);
   static bool LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path);
