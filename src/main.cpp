@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+#include <random>
+
 
 static void init() {
   System::init();
@@ -64,6 +66,14 @@ int main(int argc, char *argv[]) {
 
   float animationT = 0;
 
+  const int16_t GRID_SIZE = 25;
+  std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+  std::uniform_real_distribution<double> rand(-GRID_SIZE, GRID_SIZE);
+  std::vector<std::pair<glm::vec3, glm::vec3>> bodies;
+  for(int i = 0; i < 50; i++) {
+    bodies.push_back({glm::vec3(rand(gen), 0, rand(gen)), glm::vec3(0)});
+  }
+
 
   while(Renderer::window->isOpen()) {
     while(const auto &eventOpt = Renderer::window->pollEvent()) {
@@ -80,7 +90,15 @@ int main(int argc, char *argv[]) {
       User::Mouse::update();
       Editor::update();
 
-      animationT += System::deltaTime;
+      animationT += System::deltaTime * .1;
+
+      for(&[position, velocity] : bodies) {
+        const glm::vec3 dir = glm::vec3(0) - position;
+        const float dist = glm::length(dir);
+        velocity += length != 0? dir/sqrt(length)*(Gravity*(planet.mass/length)) : glm::vec3(0);
+
+        position += velocity;
+      }
     }
 
     { //Render
@@ -92,20 +110,27 @@ int main(int argc, char *argv[]) {
 
       // primitiveRenderer.draw(glm::mat4x4(1));
 
-      const int16_t GRID_SIZE = 10;
-      const float MID_HEIGHT = 10;
-      for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
-        for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
-          const float a = glm::cos(static_cast<float>(x));
-          const float b = glm::cos(static_cast<float>(z));
-          const float c = glm::cos(animationT);
-          const float maxAngle = 180;
-          const float startAngle = 90;
-          const float angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
+      if(true) { //Weird Grid
+        const int16_t GRID_SIZE = 25;
+        for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
+          for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
+            const double a = glm::cos(static_cast<float>(x));
+            const double b = glm::cos(static_cast<float>(z));
+            const double c = glm::cos(animationT);
+            const double maxAngle = 180;
+            const double startAngle = 90;
+            const double angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
 
-          primitiveRenderer.draw(Transform(glm::vec3(x,0,z), glm::rotate(glm::mat4x4(1), angle, glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
+            const glm::vec3 position = 
+              glm::angleAxis(animationT * (x * z) * System::deltaTime * System::deltaTime, glm::vec3(1,0,0)) *
+              glm::angleAxis(animationT, glm::vec3(0,1,0)) *
+              glm::vec3(x,0,z);
+            primitiveRenderer.draw(Transform(position, glm::rotate(glm::mat4x4(1), static_cast<float>(angle), glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
+          }
         }
       }
+
+      primitiveRenderer.draw(Transform(glm::vec3(0), glm::quat(), glm::vec3(5)).getMatrix());
 
       // linesRenderer.draw(glm::mat4x4(1));
 
