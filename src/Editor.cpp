@@ -33,8 +33,8 @@ void Editor::init() {
 
   worldGridRenderer = MeshRenderer(nullptr, &Renderer::UnlitShader);
   worldGridMesh = Mesh(MeshType::Lines); {
-    const int16_t GRID_SIZE = 20;
-    
+
+    const int16_t GRID_SIZE = 100;
     for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
       const float alpha = ((i % 10) == 0)? .5f : .25f;
 

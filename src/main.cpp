@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+#include <random>
+
 
 static void init() {
   System::init();
@@ -59,6 +61,14 @@ int main(int argc, char *argv[]) {
   }
 
   float animationT = 0;
+
+  const int16_t GRID_SIZE = 25;
+  std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+  std::uniform_real_distribution<double> rand(-GRID_SIZE, GRID_SIZE);
+  std::vector<std::pair<glm::vec3, glm::vec3>> bodies;
+  for(int i = 0; i < 50; i++) {
+    bodies.push_back({glm::vec3(rand(gen), 0, rand(gen)), glm::vec3(0)});
+  }
 
 
   while(Renderer::window->isOpen()) {
@@ -117,7 +127,7 @@ int main(int argc, char *argv[]) {
           }
         }
       }
-
+      
       Renderer::display();
     }
   }
