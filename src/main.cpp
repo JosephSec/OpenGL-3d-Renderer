@@ -2,6 +2,7 @@
 #include <User.hpp>
 #include <Engine/Renderer.hpp>
 #include <Editor.hpp>
+#include <SceneManager.hpp>
 
 #include <SFML/Graphics.hpp>
 
@@ -54,21 +55,35 @@ int main(int argc, char *argv[]) {
   }
 
 
-  MeshRenderer groundMeshRenderer(nullptr, &Renderer::UnlitShader);
+  GameObject groundObject;
   Mesh groundMesh; {
     Editor::LoadMeshPrimitive(groundMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"quad.mesh");
-    groundMeshRenderer.setMesh(&groundMesh);
+    
+    MeshRenderer groundMeshRenderer(&groundMesh, &Renderer::UnlitShader);
+    groundObject = GameObject{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))};
+    SceneManager::gameObjects.push_back(&groundObject);
+  }
+
+  
+  Camera *playerCamera = new Camera(glm::vec3(0,2,0));
+  float playerCameraXRotation = 0;
+  Editor::playModeCamera = playerCamera;
+  Editor::cameras.push_back(playerCamera);
+
+  GameObject playerObject;
+  Mesh playerMesh; {
+    Editor::LoadMeshPrimitive(playerMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"cylinder.mesh");
+    
+    for(int i = 0; i < playerMesh.vertices.size(); i++) {
+      playerMesh.vertices[i].color = {1,0,0, 1};
+    }
+    
+    MeshRenderer playerRenderer(&playerMesh, &Renderer::UnlitShader);
+    playerObject = GameObject{playerRenderer, Transform(glm::vec3(0,1,0), glm::quat(), glm::vec3(.5,1,.5))};
+    SceneManager::gameObjects.push_back(&playerObject);
   }
 
   float animationT = 0;
-
-  const int16_t GRID_SIZE = 25;
-  std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
-  std::uniform_real_distribution<double> rand(-GRID_SIZE, GRID_SIZE);
-  std::vector<std::pair<glm::vec3, glm::vec3>> bodies;
-  for(int i = 0; i < 50; i++) {
-    bodies.push_back({glm::vec3(rand(gen), 0, rand(gen)), glm::vec3(0)});
-  }
 
 
   while(Renderer::window->isOpen()) {
@@ -86,7 +101,36 @@ int main(int argc, char *argv[]) {
       User::Mouse::update();
       Editor::update();
 
-      animationT += System::deltaTime * .1;
+      animationT += System::deltaTime * 100;
+
+
+      if(Editor::playMode) {
+        glm::vec3 moveDir = glm::vec3(0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+        if(glm::length(moveDir) != 0) {
+          const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
+          playerObject.transform.position += (playerObject.transform.rotation * glm::normalize(moveDir)) * speed;
+          playerCamera->transform.position = playerObject.transform.position + glm::vec3(0,1,0);
+
+          Renderer::UpdateViewMatrix();
+        }
+
+        if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+          const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
+          playerCameraXRotation = glm::clamp(playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
+
+          const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+          const glm::quat pitch = glm::angleAxis(playerCameraXRotation, glm::vec3(1,0,0));
+
+          playerObject.transform.rotation = glm::normalize(playerObject.transform.rotation * yaw);
+          playerCamera->transform.rotation = glm::normalize(playerObject.transform.rotation * pitch);
+
+          Renderer::UpdateViewMatrix();
+        }
+      }
     }
 
     { //Render
@@ -96,38 +140,15 @@ int main(int argc, char *argv[]) {
 
       Editor::draw();
 
-      primitiveRenderer.draw(glm::mat4x4(1));
-
-      // const glm::quat rotation = Renderer::camera->transform.rotation;
-      // for(int i = 0; i < primitiveMesh.vertices.size(); i++) {
-      //   const glm::vec3 vertPosition = primitiveMesh.vertices[i].position;
-      //   const glm::quat rotation = glm::quatLookAt(glm::normalize(vertPosition - Renderer::camera->transform.position), glm::vec3(0,1,0));
-      //   circleMeshRenderer.draw(Transform(vertPosition, rotation, glm::vec3(.1)).getMatrix());
-      // }
-
-      const glm::vec3 size = glm::vec3(30 + glm::cos(animationT) * 10, 30 + glm::cos(animationT) * 10, 1);
-      groundMeshRenderer.draw(Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), size).getMatrix());
-
-      if(true) { //Weird Grid
-        const int16_t GRID_SIZE = 25;
-        for(int x = -GRID_SIZE; x < GRID_SIZE; x++) {
-          for(int z = -GRID_SIZE; z <= GRID_SIZE; z++) {
-            const double a = glm::cos(static_cast<float>(x));
-            const double b = glm::cos(static_cast<float>(z));
-            const double c = glm::cos(animationT);
-            const double maxAngle = 180;
-            const double startAngle = 90;
-            const double angle = glm::radians((startAngle + (c * a * b) * maxAngle) * c);
-
-            const glm::vec3 position = 
-              glm::angleAxis(animationT * (x * z) * System::deltaTime * System::deltaTime, glm::vec3(1,0,0)) *
-              // glm::angleAxis(animationT, glm::vec3(0,1,0)) *
-              glm::vec3(x,0,z);
-            primitiveRenderer.draw(Transform(position, glm::rotate(glm::mat4x4(1), static_cast<float>(angle), glm::vec3(1,0,0)), glm::vec3(1)).getMatrix());
-          }
-        }
+      const glm::quat rotation = Renderer::camera->transform.rotation;
+      for(int i = 0; i < primitiveMesh.vertices.size(); i++) {
+        const glm::vec3 vertPosition = primitiveMesh.vertices[i].position;
+        const glm::quat rotation = glm::quatLookAt(glm::normalize(vertPosition - Renderer::camera->transform.position), glm::vec3(0,1,0));
+        circleMeshRenderer.draw(Transform(vertPosition, rotation, glm::vec3(.1)).getMatrix());
       }
-      
+
+      SceneManager::draw();
+
       Renderer::display();
     }
   }

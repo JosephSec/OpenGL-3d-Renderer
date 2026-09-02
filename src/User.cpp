@@ -30,6 +30,8 @@ void User::init() {
 void User::HandleEvent(const sf::Event &_event) {
   if(const auto *keyPressed = _event.getIf<sf::Event::KeyPressed>()) {
     if(keyPressed->code == sf::Keyboard::Key::Escape) Renderer::window->close();
+    else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::TogglePlayMode();
+    
     else if(keyPressed->code == sf::Keyboard::Key::X) {
       std::stringstream ss;
       ss << "Delta Time: " << System::deltaTime << '\n' <<
@@ -39,9 +41,11 @@ void User::HandleEvent(const sf::Event &_event) {
     else if(keyPressed->code == sf::Keyboard::Key::Z) {
       Renderer::ToggleWireframeMode(!Renderer::wireframeMode);
     }
+    
     else if(keyPressed->code == sf::Keyboard::Key::Space) {
       Editor::cameras.push_back(new Camera(*Editor::camera));
     }
+    
     else if(keyPressed->code == sf::Keyboard::Key::Left) {
       for(int i = 0; i < Editor::cameras.size(); i++) {
         if(Editor::cameras[i] != Renderer::camera) continue;

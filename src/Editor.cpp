@@ -18,6 +18,9 @@ Mesh Editor::worldGridMesh;
 
 std::vector<Camera*> Editor::cameras;
 
+Camera *Editor::playModeCamera = nullptr;
+bool Editor::playMode = false;
+
 
 void Editor::init() {
   camera = new Camera();
@@ -33,7 +36,6 @@ void Editor::init() {
 
   worldGridRenderer = MeshRenderer(nullptr, &Renderer::UnlitShader);
   worldGridMesh = Mesh(MeshType::Lines); {
-
     const int16_t GRID_SIZE = 100;
     for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
       const float alpha = ((i % 10) == 0)? .5f : .25f;
@@ -53,28 +55,30 @@ void Editor::init() {
   }
 }
 void Editor::update() {
-  if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-    glm::vec3 moveDir = glm::vec3(0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
-    if(glm::length(moveDir) != 0) {
-      const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
-      camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
+  if(playMode == false) {
+    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
+      glm::vec3 moveDir = glm::vec3(0);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
+      if(glm::length(moveDir) != 0) {
+        const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
+        camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
+      }
+
+      if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+        const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * sensitivity * System::deltaTime;
+
+        const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
+        const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+        camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
+      }
+
+      Renderer::UpdateViewMatrix();
     }
-
-    if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-      const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * sensitivity * System::deltaTime;
-
-      const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
-      const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-      camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
-    }
-
-    Renderer::UpdateViewMatrix();
   }
 }
 void Editor::draw() {
@@ -95,12 +99,19 @@ void Editor::draw() {
 
 
   for(const Camera *_camera : cameras) {
-    cubeRenderer.draw(_camera->transform.getMatrix());
+    cubeRenderer.draw(Transform(_camera->transform.position, _camera->transform.rotation, glm::vec3(.25f)).getMatrix());
     lineRenderer.draw(_camera->transform.getMatrix());
   }
 }
 void Editor::end() {
   for(Camera *cameraPtr : cameras) delete cameraPtr;
+}
+
+
+void Editor::TogglePlayMode() {
+  playMode = !playMode;
+
+  Renderer::SetCamera(playMode? playModeCamera : camera);
 }
 
 void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path) {

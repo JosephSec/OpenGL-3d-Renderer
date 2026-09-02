@@ -18,11 +18,17 @@ public:
 
   static std::vector<Camera*> cameras;
 
+  static Camera *playModeCamera;
+  static bool playMode;
+
 
   static void init();
   static void update();
   static void draw();
   static void end();
+
+
+  static void TogglePlayMode();
 
   static void SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path);
   static bool LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path);

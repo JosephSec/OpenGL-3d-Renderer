@@ -14,7 +14,7 @@ public:
 
   Transform transform;
   float nearPlane = .1;
-  float farPlane = 50;
+  float farPlane = 500;
   float fov = 60;
   // glm::vec4 viewPort = glm::vec4(0,0,1,1);
 };
