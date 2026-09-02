@@ -8,6 +8,11 @@
 #include <iostream>
 
 
+std::filesystem::path Editor::primitiveMeshFolder;
+std::map<std::string, std::filesystem::path> Editor::primitiveMeshPaths;
+
+std::vector<Camera*> Editor::cameras;
+
 Camera *Editor::camera;
 float Editor::sensitivity = 1;
 float Editor::slowModeSpeed = 10;
@@ -16,13 +21,20 @@ float Editor::fastModeSpeed = 20;
 MeshRenderer Editor::worldGridRenderer;
 Mesh Editor::worldGridMesh;
 
-std::vector<Camera*> Editor::cameras;
-
 Camera *Editor::playModeCamera = nullptr;
 bool Editor::playMode = false;
 
 
 void Editor::init() {
+  primitiveMeshFolder = std::filesystem::path(System::PATH)/"assets"/"meshes";
+  primitiveMeshPaths = {
+    {"cube", primitiveMeshFolder/"cube.mesh"},
+    {"circle", primitiveMeshFolder/"circle.mesh"},
+    {"cylinder", primitiveMeshFolder/"cylinder.mesh"},
+    {"pyramid", primitiveMeshFolder/"pyramid.mesh"},
+    {"quad", primitiveMeshFolder/"quad.mesh"},
+  };
+
   camera = new Camera();
   camera->farPlane = 500;
   camera->fov = 90;
@@ -40,11 +52,11 @@ void Editor::init() {
     for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
       const float alpha = ((i % 10) == 0)? .5f : .25f;
 
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{-GRID_SIZE,0,i}, {1,1,1, alpha}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{ GRID_SIZE,0,i}, {1,1,1, alpha}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{-GRID_SIZE,0,i}, {1,1,1, alpha}, {0,0}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{ GRID_SIZE,0,i}, {1,1,1, alpha}, {0,0}});
 
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0,-GRID_SIZE}, {1,1,1, alpha}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0, GRID_SIZE}, {1,1,1, alpha}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0,-GRID_SIZE}, {1,1,1, alpha}, {0,0}});
+      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0, GRID_SIZE}, {1,1,1, alpha}, {0,0}});
     }
 
     const uint32_t vertexCount = worldGridMesh.vertices.size();
@@ -85,7 +97,7 @@ void Editor::draw() {
   worldGridRenderer.draw(glm::mat4x4(1));
 
   Mesh cubeMesh;
-  LoadMeshPrimitive(cubeMesh, std::filesystem::path(System::PATH)/"assets"/"meshes"/"cube.mesh");
+  LoadMeshPrimitive(cubeMesh, "cube");
   MeshRenderer cubeRenderer(&cubeMesh, &Renderer::UnlitShader);
   
   Mesh lineMesh(MeshType::Lines); {
@@ -114,7 +126,9 @@ void Editor::TogglePlayMode() {
   Renderer::SetCamera(playMode? playModeCamera : camera);
 }
 
-void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path) {
+void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
+  const std::filesystem::path _path = primitiveMeshFolder/(_name + ".mesh");
+
   if(std::filesystem::exists(_path.parent_path()) == false) {
     std::filesystem::create_directories(_path.parent_path());
   }
@@ -136,24 +150,44 @@ void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_
 
   file.close();
 }
-bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path) {
-  if(std::filesystem::exists(_path) == false) {
-    std::cout << "[Editor Error]: File does not exist: " << _path.string() << '\n';
+bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::string &_name) {
+  if(primitiveMeshPaths.contains(_name) == false) {
+    std::cout << "[Editor Error]: Primitive Mesh does not exist: " << _name << '\n';
     return false;
   }
 
-  std::ifstream file(_path, std::ios::binary);
+  const std::filesystem::path meshPath = primitiveMeshPaths[_name];
+
+  if(std::filesystem::exists(meshPath) == false) {
+    std::cout << "[Editor Error]: File does not exist: " << meshPath.string() << '\n';
+    return false;
+  }
+
+  std::ifstream file(meshPath, std::ios::binary);
   if(!file.is_open()) {
-    std::cout << "[Editor Error]: Failed to open file for reading: " << _path.string() << '\n';
+    std::cout << "[Editor Error]: Failed to open file for reading: " << meshPath.string() << '\n';
     return false;
   }
 
   uint32_t vertexCount = 0;
   uint32_t indexCount = 0;
 
+  struct OldVertex {
+  public:
+    glm::vec3 position;
+    glm::vec4 color;
+  };
+  std::vector<OldVertex> dataBuffer;
+
   file.read(reinterpret_cast<char*>(&vertexCount), sizeof(vertexCount));
+
+  dataBuffer.resize(vertexCount);
+  file.read(reinterpret_cast<char*>(dataBuffer.data()), sizeof(OldVertex) * vertexCount);
+
   _mesh.vertices.resize(vertexCount);
-  file.read(reinterpret_cast<char*>(_mesh.vertices.data()), sizeof(Mesh::Vertex) * vertexCount);
+  for(int i = 0; i < vertexCount; i++) {
+    _mesh.vertices[i] = Mesh::Vertex{dataBuffer[i].position, dataBuffer[i].color, {0,0}};
+  }
 
   file.read(reinterpret_cast<char*>(&indexCount), sizeof(indexCount));
   _mesh.indices.resize(indexCount);
@@ -161,4 +195,13 @@ bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path) 
 
   file.close();
   return true;
+}
+
+void Editor::RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors) {  
+  const uint32_t vertexCount = _mesh.vertices.size();
+  const uint32_t colorCount = _colors.size();
+
+  for(int i = 0; i < vertexCount; i++) {
+    _mesh.vertices[i].color = _colors[i % colorCount];
+  }
 }

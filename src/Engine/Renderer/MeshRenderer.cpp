@@ -1,5 +1,7 @@
 #include <Engine/Renderer/MeshRenderer.hpp>
 
+#include <iostream>
+
 
 MeshRenderer::MeshRenderer(Mesh *_mesh, Shader *_shader) {
   if(glGenBuffers == nullptr) return;
@@ -18,6 +20,10 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   if(shader != nullptr) {
     glUseProgram(shader->program);
     shader->SetUniform("model", _matrix);
+
+    // glActiveTexture(GL_TEXTURE1);
+    // glBindTexture(GL_TEXTURE_2D, *mesh->texture);
+
   } else glUseProgram(0);
 
   glBindVertexArray(vao);
@@ -34,6 +40,7 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
 
   glDrawElements(drawType, mesh->indices.size(), GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
+  glUseProgram(0);
 }
 
 void MeshRenderer::setMesh(Mesh *_mesh) {
@@ -60,11 +67,14 @@ void MeshRenderer::setMesh(Mesh *_mesh) {
   glBindBuffer(GL_ARRAY_BUFFER, vbo);  
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);  
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Mesh::VERTEX_SIZE, (void*)(0 * sizeof(float)));
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Mesh::VERTEX_SIZE, (void*)offsetof(Mesh::Vertex, position));
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, Mesh::VERTEX_SIZE, (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, Mesh::VERTEX_SIZE, (void*)offsetof(Mesh::Vertex, color));
   glEnableVertexAttribArray(1);
+
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, Mesh::VERTEX_SIZE, (void*)offsetof(Mesh::Vertex, uv));
+  glEnableVertexAttribArray(2);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * Mesh::VERTEX_SIZE, mesh->vertices.data(), GL_DYNAMIC_DRAW);

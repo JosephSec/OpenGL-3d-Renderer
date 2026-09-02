@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 
 #include <Engine/Renderer/Camera.hpp>
 #include <Engine/Renderer/MeshRenderer.hpp>
@@ -8,6 +9,11 @@
 
 class Editor {
 public:
+  static std::filesystem::path primitiveMeshFolder;
+  static std::map<std::string, std::filesystem::path> primitiveMeshPaths;
+
+  static std::vector<Camera*> cameras;
+
   static Camera *camera;
   static float sensitivity;
   static float slowModeSpeed;
@@ -15,8 +21,6 @@ public:
 
   static MeshRenderer worldGridRenderer;
   static Mesh worldGridMesh;
-
-  static std::vector<Camera*> cameras;
 
   static Camera *playModeCamera;
   static bool playMode;
@@ -30,6 +34,9 @@ public:
 
   static void TogglePlayMode();
 
-  static void SaveMeshPrimitive(const Mesh &_mesh, const std::filesystem::path &_path);
-  static bool LoadMeshPrimitive(Mesh &_mesh, const std::filesystem::path &_path);
+
+  static void SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name);
+  static bool LoadMeshPrimitive(Mesh &_mesh, const std::string &_name);
+
+  static void RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors);
 };

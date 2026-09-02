@@ -3,6 +3,7 @@
 #include <Engine/EngineAPI.hpp>
 
 #include <cstdint>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/constants.hpp>
@@ -19,8 +20,9 @@ class ZENGINE_API Mesh {
 public:
   struct Vertex {
   public:
-    glm::vec3 position;
-    glm::vec4 color;
+    glm::vec3 position = {0,0,0};
+    glm::vec4 color = {1,1,1,1};
+    glm::vec2 uv = {0,0};
   };
   static constexpr uint16_t VERTEX_SIZE = sizeof(Vertex);
   static constexpr uint16_t VERTEX_FLOAT_COUNT = sizeof(Vertex) / sizeof(float);
@@ -31,10 +33,8 @@ public:
   std::vector<Vertex> vertices;
   std::vector<unsigned int> indices;
 
-  GLuint vao;
-  GLuint vbo;
-  GLuint ebo;
-
+  GLuint *texture = nullptr;
+  
 
   Mesh(MeshType _type = MeshType::LitTriangle);
   ~Mesh();
