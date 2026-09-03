@@ -14,9 +14,9 @@ MeshRenderer::MeshRenderer(Mesh *_mesh, Shader *_shader) {
 
 void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   if(mesh == nullptr) return;
-
+  
   backFaceCulling? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-
+  
   if(shader != nullptr) {
     glUseProgram(shader->program);
     shader->SetUniform("model", _matrix);

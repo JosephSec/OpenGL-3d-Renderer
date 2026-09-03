@@ -35,7 +35,7 @@ public:
   static void TogglePlayMode();
 
 
-  static void SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name);
+  static bool SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name);
   static bool LoadMeshPrimitive(Mesh &_mesh, const std::string &_name);
 
   static void RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors);

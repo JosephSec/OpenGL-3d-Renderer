@@ -22,5 +22,5 @@ public:
   GLuint vao, vbo, ebo;
   Mesh *mesh = nullptr;
   Shader *shader = nullptr;
-  bool backFaceCulling;
+  bool backFaceCulling = false;
 };

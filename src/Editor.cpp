@@ -27,13 +27,11 @@ bool Editor::playMode = false;
 
 void Editor::init() {
   primitiveMeshFolder = std::filesystem::path(System::PATH)/"assets"/"meshes";
-  primitiveMeshPaths = {
-    {"cube", primitiveMeshFolder/"cube.mesh"},
-    {"circle", primitiveMeshFolder/"circle.mesh"},
-    {"cylinder", primitiveMeshFolder/"cylinder.mesh"},
-    {"pyramid", primitiveMeshFolder/"pyramid.mesh"},
-    {"quad", primitiveMeshFolder/"quad.mesh"},
-  };
+  for(const auto& entry : std::filesystem::directory_iterator(primitiveMeshFolder)) {
+    if(std::filesystem::is_regular_file(entry.status()) == false) continue;
+
+    primitiveMeshPaths.insert({entry.path().stem().string(), entry.path()});
+  }
 
   camera = new Camera();
   camera->farPlane = 500;
@@ -126,7 +124,7 @@ void Editor::TogglePlayMode() {
   Renderer::SetCamera(playMode? playModeCamera : camera);
 }
 
-void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
+bool Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
   const std::filesystem::path _path = primitiveMeshFolder/(_name + ".mesh");
 
   if(std::filesystem::exists(_path.parent_path()) == false) {
@@ -136,7 +134,7 @@ void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
   std::ofstream file(_path, std::ios::binary);
   if(!file.is_open()) {
     std::cout << "[Editor Error]: Failed to open file for writing: " << _path.string() << '\n';
-    return;
+    return false;
   }
 
   const uint32_t vertexCount = static_cast<uint32_t>(_mesh.vertices.size());
@@ -149,9 +147,10 @@ void Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
   file.write(reinterpret_cast<const char*>(_mesh.indices.data()), sizeof(uint32_t) * indexCount);
 
   file.close();
+  return true;
 }
 bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::string &_name) {
-  if(primitiveMeshPaths.contains(_name) == false) {
+  if(primitiveMeshPaths.find(_name) == primitiveMeshPaths.end()) {
     std::cout << "[Editor Error]: Primitive Mesh does not exist: " << _name << '\n';
     return false;
   }
@@ -172,22 +171,9 @@ bool Editor::LoadMeshPrimitive(Mesh &_mesh, const std::string &_name) {
   uint32_t vertexCount = 0;
   uint32_t indexCount = 0;
 
-  struct OldVertex {
-  public:
-    glm::vec3 position;
-    glm::vec4 color;
-  };
-  std::vector<OldVertex> dataBuffer;
-
   file.read(reinterpret_cast<char*>(&vertexCount), sizeof(vertexCount));
-
-  dataBuffer.resize(vertexCount);
-  file.read(reinterpret_cast<char*>(dataBuffer.data()), sizeof(OldVertex) * vertexCount);
-
   _mesh.vertices.resize(vertexCount);
-  for(int i = 0; i < vertexCount; i++) {
-    _mesh.vertices[i] = Mesh::Vertex{dataBuffer[i].position, dataBuffer[i].color, {0,0}};
-  }
+  file.read(reinterpret_cast<char*>(_mesh.vertices.data()), sizeof(Mesh::Vertex) * vertexCount);
 
   file.read(reinterpret_cast<char*>(&indexCount), sizeof(indexCount));
   _mesh.indices.resize(indexCount);
