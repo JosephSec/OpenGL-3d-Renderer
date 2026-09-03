@@ -20,7 +20,6 @@ public:
   static float fastModeSpeed;
 
   static MeshRenderer worldGridRenderer;
-  static Mesh worldGridMesh;
 
   static Camera *playModeCamera;
   static bool playMode;

@@ -36,10 +36,15 @@ public:
   static void init();
   static void update();
   static void draw();
+  static void end();
 
 
   static Mesh *LoadMeshToScene(const std::string &_name);
   static Mesh *LoadMeshToScene(Mesh &_mesh, const std::string &_name);
+
+  static Mesh *GetSceneMesh(const std::string &_name);
+  static Mesh *CopySceneMesh(const std::string &_name, const std::string &_copyName);
+
 
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform);
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const std::vector<Transform> &_transforms);

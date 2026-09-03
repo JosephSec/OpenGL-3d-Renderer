@@ -23,10 +23,10 @@ static void init() {
 
 int main(int argc, char *argv[]) {
   init();
-
+  
   SceneManager::TestPrimitiveMeshLoading();
 
-
+  
   while(Renderer::window->isOpen()) {
     while(const auto &eventOpt = Renderer::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
 
   Renderer::end();
   Editor::end();
+  SceneManager::end();
 
   return 0;
 }

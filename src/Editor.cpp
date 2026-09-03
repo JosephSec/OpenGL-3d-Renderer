@@ -3,8 +3,10 @@
 #include <User.hpp>
 #include <Engine/Renderer.hpp>
 
-#include <fstream>
+#include <SceneManager.hpp>
+#include <Engine/PrimitiveMeshGenerator.hpp>
 
+#include <fstream>
 #include <iostream>
 
 
@@ -19,7 +21,6 @@ float Editor::slowModeSpeed = 10;
 float Editor::fastModeSpeed = 20;
 
 MeshRenderer Editor::worldGridRenderer;
-Mesh Editor::worldGridMesh;
 
 Camera *Editor::playModeCamera = nullptr;
 bool Editor::playMode = false;
@@ -27,9 +28,14 @@ bool Editor::playMode = false;
 
 void Editor::init() {
   primitiveMeshFolder = std::filesystem::path(System::PATH)/"assets"/"meshes";
+  
+  { //Remake Primitives
+    Mesh mesh = GenerateQuad();
+    Editor::SaveMeshPrimitive(mesh, "quad");
+  }
+
   for(const auto& entry : std::filesystem::directory_iterator(primitiveMeshFolder)) {
     if(std::filesystem::is_regular_file(entry.status()) == false) continue;
-
     primitiveMeshPaths.insert({entry.path().stem().string(), entry.path()});
   }
 
@@ -44,24 +50,22 @@ void Editor::init() {
   Renderer::UpdateProjectionMatrix();
   Renderer::UpdateViewMatrix();
 
-  worldGridRenderer = MeshRenderer(nullptr, &Renderer::UnlitShader);
-  worldGridMesh = Mesh(MeshType::Lines); {
-    const int16_t GRID_SIZE = 100;
-    for(int i = -GRID_SIZE; i <= GRID_SIZE; i++) {
-      const float alpha = ((i % 10) == 0)? .5f : .25f;
 
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{-GRID_SIZE,0,i}, {1,1,1, alpha}, {0,0}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{ GRID_SIZE,0,i}, {1,1,1, alpha}, {0,0}});
+  Mesh worldGridMesh = GenerateGrid(glm::vec2(30,30), 1);
+  worldGridRenderer = MeshRenderer(SceneManager::LoadMeshToScene(worldGridMesh, "World Grid"), &Renderer::UnlitShader);
 
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0,-GRID_SIZE}, {1,1,1, alpha}, {0,0}});
-      worldGridMesh.vertices.push_back(Mesh::Vertex{{i,0, GRID_SIZE}, {1,1,1, alpha}, {0,0}});
-    }
+  const uint32_t gridMeshHalf = worldGridMesh.vertices.size() / 2;
 
-    const uint32_t vertexCount = worldGridMesh.vertices.size();
-    worldGridMesh.indices.resize(vertexCount);
-    for(int i = 0; i < vertexCount; i++) worldGridMesh.indices[i] = i;
+  for(int i = 0; i < gridMeshHalf / 2; i++) {
+    const float alpha = ((i % 10) == 0)? .5f : .25f;
+
+    const uint32_t startA = i * 2;
+    worldGridRenderer.mesh->vertices[startA + 0].color = glm::vec4{1,1,1, alpha};
+    worldGridRenderer.mesh->vertices[startA + 1].color = glm::vec4{1,1,1, alpha};
     
-    worldGridRenderer.setMesh(&worldGridMesh);
+    const uint32_t startB = gridMeshHalf + i * 2;
+    worldGridRenderer.mesh->vertices[startB + 0].color = glm::vec4{1,1,1, alpha};
+    worldGridRenderer.mesh->vertices[startB + 1].color = glm::vec4{1,1,1, alpha};
   }
 }
 void Editor::update() {
@@ -94,9 +98,7 @@ void Editor::update() {
 void Editor::draw() {
   worldGridRenderer.draw(glm::mat4x4(1));
 
-  Mesh cubeMesh;
-  LoadMeshPrimitive(cubeMesh, "cube");
-  MeshRenderer cubeRenderer(&cubeMesh, &Renderer::UnlitShader);
+  MeshRenderer cubeRenderer(SceneManager::GetSceneMesh("cube"), &Renderer::UnlitShader);
   
   Mesh lineMesh(MeshType::Lines); {
     lineMesh.vertices = {
@@ -111,6 +113,13 @@ void Editor::draw() {
   for(const Camera *_camera : cameras) {
     cubeRenderer.draw(Transform(_camera->transform.position, _camera->transform.rotation, glm::vec3(.25f)).getMatrix());
     lineRenderer.draw(_camera->transform.getMatrix());
+  }
+
+  if(SceneManager::itemDropObject != nullptr) {
+    Mesh wireSphere = GenerateWireSphere(24, 1);
+    RandomizeMeshColors(wireSphere, {{0,1,0,1}});
+    MeshRenderer wireSphereRenderer(&wireSphere, &Renderer::UnlitShader);
+    wireSphereRenderer.draw(Transform(SceneManager::itemDropObject->transform.position).getMatrix());
   }
 }
 void Editor::end() {

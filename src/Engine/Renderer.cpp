@@ -12,8 +12,8 @@ bool Renderer::wireframeMode = false;
 Shader Renderer::UnlitShader;
 
 Camera *Renderer::camera;
-glm::mat4x4 Renderer::viewMatrix;
-glm::mat4x4 Renderer::projectionMatrix;
+glm::mat4x4 Renderer::viewMatrix = glm::mat4x4(1);
+glm::mat4x4 Renderer::projectionMatrix = glm::mat4x4(1);
 
 
 static void initGL() {

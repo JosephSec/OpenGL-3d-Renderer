@@ -6,6 +6,8 @@
 #include <Engine/Renderer.hpp>
 #include <Editor.hpp> 
 
+#include <Engine/PrimitiveMeshGenerator.hpp>
+
 
 std::map<std::string, Mesh*> SceneManager::sceneMeshes;
 std::vector<GameObject*> SceneManager::gameObjects;
@@ -28,47 +30,49 @@ void SceneManager::init() {
   };
 
   for(int i = 0; i < Editor::primitiveMeshPaths.size(); i++) {
-    Mesh *mesh = SceneManager::LoadMeshToScene(std::next(Editor::primitiveMeshPaths.begin(), i)->first);
-    Editor::RandomizeMeshColors(*mesh, colors);
+    Mesh *mesh = LoadMeshToScene(std::next(Editor::primitiveMeshPaths.begin(), i)->first);
 
     MeshRenderer meshRenderer(mesh, &Renderer::UnlitShader);
-    SceneManager::gameObjects.push_back(new GameObject{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
+    gameObjects.push_back(new GameObject{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
   }
 
   
   { //Ground
-    MeshRenderer groundMeshRenderer(LoadMeshToScene("quad"), &Renderer::UnlitShader);
-    GameObject *groundObject = new GameObject{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))};
-    SceneManager::gameObjects.push_back(groundObject);
+    Mesh *mesh = CopySceneMesh("quad", "ground");
+    Editor::RandomizeMeshColors(*mesh, {{0,0,0, 1}});
+
+    MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
+    gameObjects.push_back(new GameObject{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))});
   }
-  
+
   { //Item Drop
-    Mesh *mesh = SceneManager::LoadMeshToScene("cube");
+    Mesh *mesh = CopySceneMesh("cube", "itemDrop");
     Editor::RandomizeMeshColors(*mesh, colors);
 
     MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
     itemDropObject = new GameObject{groundMeshRenderer, Transform(glm::vec3(0,1,-5), glm::quat(), glm::vec3(.5f))};
-    SceneManager::gameObjects.push_back(itemDropObject);
+    gameObjects.push_back(itemDropObject);
   }
 
-  // { //Player
-  //   Mesh *mesh = SceneManager::LoadMeshToScene("cylinder");
-  //   Editor::RandomizeMeshColors(*mesh, colors);
+  { //Player
+    Mesh playerBodyMesh = GenerateCylinder(12, 2, .5f);
+    Editor::RandomizeMeshColors(playerBodyMesh, {{1,0,0,1}});
+    Mesh *mesh = LoadMeshToScene(playerBodyMesh, "playerBody");
 
-  //   MeshRenderer playerRenderer(mesh, &Renderer::UnlitShader);
-  //   playerObject = new GameObject{playerRenderer, Transform(glm::vec3(0,1,0), glm::quat(), glm::vec3(.5,1,.5))};
-  //   SceneManager::gameObjects.push_back(playerObject);
+    MeshRenderer playerRenderer(mesh, &Renderer::UnlitShader);
+    playerObject = new GameObject{playerRenderer, Transform(glm::vec3(0,1,0))};
+    gameObjects.push_back(playerObject);
   
-  //   playerCamera = new Camera(glm::vec3(0,2,0));
-  //   Editor::playModeCamera = playerCamera;
-  //   Editor::cameras.push_back(playerCamera);
-  // }
+    playerCamera = new Camera(glm::vec3(0,2,0));
+    Editor::playModeCamera = playerCamera;
+    Editor::cameras.push_back(playerCamera);
+  }
 }
 void SceneManager::update() {
   animationT += System::deltaTime * 100;
 
   if(Editor::playMode) {
-    if(true) { //Item Drop Movement
+    if(true && itemDropObject != nullptr) { //Item Drop Movement
       itemDropObject->transform.position = glm::vec3(0,1 + glm::sin(glm::radians<float>(animationT)) * .25,-5);
       itemDropObject->transform.rotation = glm::angleAxis(glm::radians<float>(animationT), glm::vec3(0,1,0));
     }
@@ -99,11 +103,27 @@ void SceneManager::update() {
 
         Renderer::UpdateViewMatrix();
       }
+
+
+      if(itemDropObject != nullptr && glm::length(playerObject->transform.position - itemDropObject->transform.position) <= 1) {
+        for(int i = 0; i < gameObjects.size(); i++) {
+          if(gameObjects[i] != itemDropObject) continue;
+
+          std::swap(gameObjects[i], gameObjects.back());
+          gameObjects.pop_back();
+          delete itemDropObject;
+          break;
+        }
+      }
     }
   }
 }
 void SceneManager::draw() {
   for(const GameObject *gameObject : gameObjects) gameObject->draw();
+}
+void SceneManager::end() {
+  for(const auto &[name, meshPtr] : sceneMeshes) delete meshPtr;
+  for(GameObject *gameObject : gameObjects) delete gameObject;
 }
 
 
@@ -122,6 +142,21 @@ Mesh *SceneManager::LoadMeshToScene(Mesh &_mesh, const std::string &_name) {
   sceneMeshes[_name] = new Mesh(_mesh);
   return sceneMeshes[_name];
 }
+
+Mesh *SceneManager::GetSceneMesh(const std::string &_name) {
+  const auto &it = sceneMeshes.find(_name);
+  if(it != sceneMeshes.end()) return it->second;
+
+  std::cout << "[SceneManager Error]: GetSceneMesh(" << _name << ") returned nullptr, mush was not found\n";
+  return nullptr;
+}
+Mesh *SceneManager::CopySceneMesh(const std::string &_name, const std::string &_copyName) {
+  Mesh *mesh = GetSceneMesh(_name);
+  if(mesh == nullptr) return nullptr;
+
+  return LoadMeshToScene(*mesh, _copyName);
+}
+
 
 void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform) {
   _meshRenderer.draw(_transform.getMatrix());
