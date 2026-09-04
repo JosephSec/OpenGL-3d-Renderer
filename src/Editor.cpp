@@ -41,7 +41,7 @@ void Editor::init() {
 
   camera = new Camera();
   camera->farPlane = 500;
-  camera->fov = 90;
+  camera->fov = 175;
 
   Renderer::camera = camera;
   cameras.push_back(Renderer::camera);
