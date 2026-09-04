@@ -57,6 +57,9 @@ void Renderer::end() {
 void Renderer::clear() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
+void Renderer::ClearDepthBuffer() {
+  glClear(GL_DEPTH_BUFFER_BIT);
+}
 void Renderer::SetShader(GLuint _program) {
   glUseProgram(_program);
 }

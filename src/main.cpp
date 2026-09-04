@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
     { //Render
       Renderer::clear();
 
-      Editor::draw();
       SceneManager::draw();
+      Editor::draw();
 
       Renderer::display();
     }

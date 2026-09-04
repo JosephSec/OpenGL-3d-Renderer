@@ -36,7 +36,7 @@ void SceneManager::init() {
     gameObjects.push_back(new GameObject{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
   }
 
-  
+
   { //Ground
     Mesh *mesh = CopySceneMesh("quad", "ground");
     Editor::RandomizeMeshColors(*mesh, {{0,0,0, 1}});
@@ -64,6 +64,7 @@ void SceneManager::init() {
     gameObjects.push_back(playerObject);
   
     playerCamera = new Camera(glm::vec3(0,2,0));
+    playerCamera->nearPlane = .2f;
     Editor::playModeCamera = playerCamera;
     Editor::cameras.push_back(playerCamera);
   }
@@ -112,6 +113,7 @@ void SceneManager::update() {
           std::swap(gameObjects[i], gameObjects.back());
           gameObjects.pop_back();
           delete itemDropObject;
+          itemDropObject = nullptr;
           break;
         }
       }

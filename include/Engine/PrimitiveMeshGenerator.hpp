@@ -4,9 +4,9 @@
 
 
 static Mesh GenerateCircle(uint16_t _resolution = 12, float _radius = .5f) {
-  const float phiDif = glm::two_pi<float>() / _resolution;
-
   Mesh mesh;
+  
+  const float phiDif = glm::two_pi<float>() / _resolution;
   
   mesh.vertices.resize(1 + _resolution);
   mesh.vertices[0] = Mesh::Vertex{glm::vec3(0), {1,1,1, 1}};
@@ -108,6 +108,40 @@ static Mesh GenerateQuad(const glm::vec2 _size = glm::vec2(1)) {
     Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y, 0}, {1,1,1, 1}},
   };
   mesh.indices = {0,1,2, 0,2,3};
+
+  return mesh;
+}
+static Mesh GeneratePyramid(uint16_t _resolution = 4, float _height = 1, float _radius = .5f) {
+  Mesh mesh;
+  
+  const float phiDif = glm::two_pi<float>() / _resolution;
+
+  mesh.vertices.resize(1 + _resolution + 1);
+  mesh.vertices[0] = Mesh::Vertex{{0, _height / 2.0, 0}, {1,1,1, 1}};
+  for(int i = 0; i < _resolution; i++) {
+    mesh.vertices[i + 1] = Mesh::Vertex{
+      {glm::cos(phiDif * i) * _radius, -_height / 2.0, glm::sin(phiDif * i) * _radius},
+      {1,1,1, 1}
+    };
+  }
+  mesh.vertices[1 + _resolution] = Mesh::Vertex{{0, -_height / 2.0, 0}, {1,1,1, 1}};
+
+  mesh.indices.resize(_resolution * 6);
+  for(int i = 0; i < _resolution; i++) {
+    const unsigned int a = 0;
+    const unsigned int b = i + 1;
+    const unsigned int c = b % _resolution + 1;
+    const unsigned int d = 1 + _resolution;
+
+    const uint32_t start = i * 6;
+    mesh.indices[start+0] = a;
+    mesh.indices[start+1] = b;
+    mesh.indices[start+2] = c;
+
+    mesh.indices[start+3] = d;
+    mesh.indices[start+4] = c;
+    mesh.indices[start+5] = b;
+  }
 
   return mesh;
 }

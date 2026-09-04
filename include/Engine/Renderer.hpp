@@ -28,6 +28,7 @@ public:
   static void end();
 
   static void clear();
+  static void ClearDepthBuffer();
   static void SetShader(GLuint _program);
   static void display();
 
