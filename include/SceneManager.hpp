@@ -10,7 +10,7 @@
 #include <iostream>
 
 
-struct GameObject {
+struct GameObject_OLD {
 public:
   MeshRenderer meshRenderer;
   Transform transform;
@@ -22,12 +22,12 @@ public:
 class SceneManager {
 public:
   static std::map<std::string, Mesh*> sceneMeshes;
-  static std::vector<GameObject*> gameObjects;
+  static std::vector<GameObject_OLD*> gameObjects;
 
 
   static float animationT;
-  static GameObject *itemDropObject;
-  static GameObject *playerObject;
+  static GameObject_OLD *itemDropObject;
+  static GameObject_OLD *playerObject;
 
   static Camera *playerCamera;
   static float playerCameraXRotation;

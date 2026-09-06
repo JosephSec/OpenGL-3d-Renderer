@@ -63,13 +63,13 @@
       "args": [
         "-DZENGINE_DLL_BUILD",
 
-        "${workspaceFolder}/src/Engine/*.cpp",
-        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
+        "-I${workspaceFolder}/include",
         
         "-O3", "-flto",
-        "-I${workspaceFolder}/include",
-
         "-shared", "-o", "${workspaceFolder}/bin/zengine.dll",
+
+        "${workspaceFolder}/src/Engine/*.cpp",
+        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",

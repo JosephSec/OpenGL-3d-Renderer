@@ -10,11 +10,11 @@
 
 
 std::map<std::string, Mesh*> SceneManager::sceneMeshes;
-std::vector<GameObject*> SceneManager::gameObjects;
+std::vector<GameObject_OLD*> SceneManager::gameObjects;
 
 float SceneManager::animationT = 0;
-GameObject *SceneManager::itemDropObject = nullptr;
-GameObject *SceneManager::playerObject = nullptr;
+GameObject_OLD *SceneManager::itemDropObject = nullptr;
+GameObject_OLD *SceneManager::playerObject = nullptr;
 
 Camera *SceneManager::playerCamera = nullptr;
 float SceneManager::playerCameraXRotation = 0;
@@ -33,7 +33,7 @@ void SceneManager::init() {
     Mesh *mesh = LoadMeshToScene(std::next(Editor::primitiveMeshPaths.begin(), i)->first);
 
     MeshRenderer meshRenderer(mesh, &Renderer::UnlitShader);
-    gameObjects.push_back(new GameObject{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
+    gameObjects.push_back(new GameObject_OLD{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
   }
 
 
@@ -42,7 +42,7 @@ void SceneManager::init() {
     Editor::RandomizeMeshColors(*mesh, {{0,0,0, 1}});
 
     MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
-    gameObjects.push_back(new GameObject{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))});
+    gameObjects.push_back(new GameObject_OLD{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))});
   }
 
   { //Item Drop
@@ -50,7 +50,7 @@ void SceneManager::init() {
     Editor::RandomizeMeshColors(*mesh, colors);
 
     MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
-    itemDropObject = new GameObject{groundMeshRenderer, Transform(glm::vec3(0,1,-5), glm::quat(), glm::vec3(.5f))};
+    itemDropObject = new GameObject_OLD{groundMeshRenderer, Transform(glm::vec3(0,1,-5), glm::quat(), glm::vec3(.5f))};
     gameObjects.push_back(itemDropObject);
   }
 
@@ -60,7 +60,7 @@ void SceneManager::init() {
     Mesh *mesh = LoadMeshToScene(playerBodyMesh, "playerBody");
 
     MeshRenderer playerRenderer(mesh, &Renderer::UnlitShader);
-    playerObject = new GameObject{playerRenderer, Transform(glm::vec3(0,1,0))};
+    playerObject = new GameObject_OLD{playerRenderer, Transform(glm::vec3(0,1,0))};
     gameObjects.push_back(playerObject);
   
     playerCamera = new Camera(glm::vec3(0,2,0));
@@ -73,12 +73,12 @@ void SceneManager::update() {
   animationT += System::deltaTime * 100;
 
   if(Editor::playMode) {
-    if(true && itemDropObject != nullptr) { //Item Drop Movement
+    if(itemDropObject != nullptr) { //Item Drop Movement
       itemDropObject->transform.position = glm::vec3(0,1 + glm::sin(glm::radians<float>(animationT)) * .25,-5);
       itemDropObject->transform.rotation = glm::angleAxis(glm::radians<float>(animationT), glm::vec3(0,1,0));
     }
 
-    if(true) { //Player Movement
+    { //Player Movement
       glm::vec3 moveDir = glm::vec3(0);
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
@@ -121,11 +121,11 @@ void SceneManager::update() {
   }
 }
 void SceneManager::draw() {
-  for(const GameObject *gameObject : gameObjects) gameObject->draw();
+  for(const GameObject_OLD *gameObject : gameObjects) gameObject->draw();
 }
 void SceneManager::end() {
   for(const auto &[name, meshPtr] : sceneMeshes) delete meshPtr;
-  for(GameObject *gameObject : gameObjects) delete gameObject;
+  for(GameObject_OLD *gameObject : gameObjects) delete gameObject;
 }
 
 

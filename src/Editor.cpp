@@ -29,11 +29,6 @@ bool Editor::playMode = false;
 void Editor::init() {
   primitiveMeshFolder = std::filesystem::path(System::PATH)/"assets"/"meshes";
 
-  { //Remake Primitives
-    Mesh mesh = GeneratePyramid();
-    Editor::SaveMeshPrimitive(mesh, "pyramid");
-  }
-
   for(const auto& entry : std::filesystem::directory_iterator(primitiveMeshFolder)) {
     if(std::filesystem::is_regular_file(entry.status()) == false) continue;
     primitiveMeshPaths.insert({entry.path().stem().string(), entry.path()});
@@ -56,15 +51,15 @@ void Editor::init() {
   const uint32_t gridMeshHalf = tempMesh.vertices.size() / 2;
 
   for(int i = 0; i < gridMeshHalf / 2; i++) {
-    const float alpha = (((i + 5) % 10) == 0)? .5f : .25f;
+    const float alpha = (((i + 5) % 10) == 0)? .75f : .25f;
 
     const uint32_t startA = i * 2;
-    tempMesh.vertices[startA + 0].color = glm::vec4{1,1,1, alpha};
-    tempMesh.vertices[startA + 1].color = glm::vec4{1,1,1, alpha};
+    tempMesh.vertices[startA + 0].color = glm::vec4{alpha,alpha,alpha, 1};
+    tempMesh.vertices[startA + 1].color = glm::vec4{alpha,alpha,alpha, 1};
 
     const uint32_t startB = gridMeshHalf + i * 2;
-    tempMesh.vertices[startB + 0].color = glm::vec4{1,1,1, alpha};
-    tempMesh.vertices[startB + 1].color = glm::vec4{1,1,1, alpha};
+    tempMesh.vertices[startB + 0].color = glm::vec4{alpha,alpha,alpha, 1};
+    tempMesh.vertices[startB + 1].color = glm::vec4{alpha,alpha,alpha, 1};
   }
 
   Mesh *worldGridMesh = SceneManager::LoadMeshToScene(tempMesh, "World Grid");
@@ -101,7 +96,9 @@ void Editor::draw() {
   Renderer::ClearDepthBuffer();
   worldGridRenderer.draw(glm::mat4x4(1));
 
-  MeshRenderer cubeRenderer(SceneManager::GetSceneMesh("cube"), &Renderer::UnlitShader);
+  Mesh cubeMesh;
+  LoadMeshPrimitive(cubeMesh, "cube");
+  MeshRenderer cubeRenderer(&cubeMesh, &Renderer::UnlitShader);
 
   Mesh lineMesh(MeshType::Lines); {
     lineMesh.vertices = {
@@ -120,16 +117,18 @@ void Editor::draw() {
     lineRenderer.draw(_camera->transform.getMatrix());
   }
 
-  if(SceneManager::itemDropObject != nullptr) {
-    Mesh wireSphere = GenerateWireSphere(24, 1);
-    RandomizeMeshColors(wireSphere, {{0,1,0,1}});
-    MeshRenderer wireSphereRenderer(&wireSphere, &Renderer::UnlitShader);
-    wireSphereRenderer.draw(Transform(SceneManager::itemDropObject->transform.position).getMatrix());
+  if constexpr(false) {
+    if(SceneManager::itemDropObject != nullptr) {
+      Mesh wireSphere = GenerateWireSphere(24, 1);
+      RandomizeMeshColors(wireSphere, {{0,1,0,1}});
+      MeshRenderer wireSphereRenderer(&wireSphere, &Renderer::UnlitShader);
+      wireSphereRenderer.draw(Transform(SceneManager::itemDropObject->transform.position).getMatrix());
 
-    Mesh arrowMesh = GeneratePyramid(4, 1, .25f);
-    RandomizeMeshColors(arrowMesh, {{0,1,0,1}});
-    MeshRenderer arrowRenderer(&arrowMesh, &Renderer::UnlitShader);
-    arrowRenderer.draw(Transform(SceneManager::itemDropObject->transform.position + glm::vec3(0,2,0), glm::angleAxis(glm::radians<float>(180), glm::vec3(1,0,0))).getMatrix());
+      Mesh arrowMesh = GeneratePyramid(4, 1, .25f);
+      RandomizeMeshColors(arrowMesh, {{0,1,0,1}});
+      MeshRenderer arrowRenderer(&arrowMesh, &Renderer::UnlitShader);
+      arrowRenderer.draw(Transform(SceneManager::itemDropObject->transform.position + glm::vec3(0,2,0), glm::angleAxis(glm::radians<float>(180), glm::vec3(1,0,0))).getMatrix());
+    }
   }
 }
 void Editor::end() {
