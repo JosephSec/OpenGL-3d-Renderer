@@ -71,6 +71,7 @@ void Renderer::display() {
 void Renderer::SetCamera(Camera *_camera) {
   camera = _camera;
   UpdateViewMatrix();
+  UpdateProjectionMatrix();
 }
 void Renderer::UpdateProjectionMatrix() {
   if(camera == nullptr) {
