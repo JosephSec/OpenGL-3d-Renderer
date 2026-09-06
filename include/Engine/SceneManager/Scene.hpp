@@ -2,8 +2,9 @@
 
 #include <Engine/EngineAPI.hpp>
 
-#include <Engine/Transform.hpp>
+#include <Engine/SceneManager/Transform.hpp>
 #include <Engine/Renderer/MeshRenderer.hpp>
+#include <Engine/Renderer/Camera.hpp>
 
 #include <map>
 #include <functional>
@@ -22,7 +23,7 @@ public:
   void drawGizmos() const {
     if(m_drawGizmos != nullptr) m_drawGizmos(this);
   }
-
+  
 
   std::string name = "Empty GameObject";
   bool isActive = true;
@@ -38,6 +39,8 @@ class ZENGINE_API Scene {
 public:
   std::map<std::string, Mesh> meshes;
   std::vector<GameObject> gameObjects;
+
+  Camera *camera;
 
 
   Scene();

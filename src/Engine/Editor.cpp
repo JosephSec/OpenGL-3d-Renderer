@@ -1,17 +1,21 @@
-#include <Editor.hpp>
+#include <Engine/Editor.hpp>
 #include <System.hpp>
 #include <User.hpp>
 #include <Engine/Renderer.hpp>
 
-#include <SceneManager.hpp>
-#include <Engine/PrimitiveMeshGenerator.hpp>
+#include <Engine/SceneManager.hpp>
+#include <Engine/SceneManager/PrimitiveMeshGenerator.hpp>
 
 #include <fstream>
 #include <iostream>
 
 
+std::filesystem::path Editor::PATH;
 std::filesystem::path Editor::primitiveMeshFolder;
 std::map<std::string, std::filesystem::path> Editor::primitiveMeshPaths;
+
+float Editor::deltaTime = 0;
+glm::ivec2 Editor::mouseDelta = glm::ivec2(0);
 
 std::vector<Camera*> Editor::cameras;
 
@@ -23,12 +27,10 @@ float Editor::fastModeSpeed = 20;
 Mesh Editor::worldGridMesh;
 MeshRenderer Editor::worldGridRenderer;
 
-Camera *Editor::playModeCamera = nullptr;
-// bool Editor::playMode = false;
 
-
-void Editor::init() {
-  primitiveMeshFolder = std::filesystem::path(System::PATH)/"assets"/"meshes";
+void Editor::init(const std::filesystem::path &_PATH) {
+  PATH = _PATH;
+  primitiveMeshFolder = PATH/"assets"/"meshes";
 
   for(const auto& entry : std::filesystem::directory_iterator(primitiveMeshFolder)) {
     if(std::filesystem::is_regular_file(entry.status()) == false) continue;
@@ -47,7 +49,7 @@ void Editor::init() {
   Renderer::UpdateViewMatrix();
 
 
-  worldGridMesh = GenerateGrid(glm::ivec2(30,30), 1);
+  worldGridMesh = MeshGenerator::Grid(glm::ivec2(30,30), 1);
 
   const uint32_t gridMeshHalf = worldGridMesh.vertices.size() / 2;
 
@@ -65,8 +67,11 @@ void Editor::init() {
 
   worldGridRenderer = MeshRenderer(&worldGridMesh, &Renderer::UnlitShader);
 }
-void Editor::update() {
-  if(Renderer::camera == camera) { //if editor camera is active render target
+void Editor::update(float _deltaTime, const glm::ivec2 _mouseDelta) {
+  deltaTime = _deltaTime;
+  mouseDelta = _mouseDelta;
+
+  if(IsActiveCamera()) {
     if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
       glm::vec3 moveDir = glm::vec3(0);
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
@@ -76,12 +81,12 @@ void Editor::update() {
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
       if(glm::length(moveDir) != 0) {
-        const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
+        const float speed = deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
         camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
       }
 
-      if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-        const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * sensitivity * System::deltaTime;
+      if(glm::length(glm::vec2(mouseDelta)) != 0) {
+        const glm::vec2 lookDelta = -glm::vec2(mouseDelta) * sensitivity * deltaTime;
 
         const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
         const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
@@ -93,7 +98,7 @@ void Editor::update() {
   }
 }
 void Editor::draw() {
-  if(Renderer::camera != camera) return; //if editor camera is not active render target
+  if(IsActiveCamera() == false) return; //if editor camera is not active render target
 
   Renderer::ClearDepthBuffer();
   worldGridRenderer.draw(glm::mat4x4(1));
@@ -126,11 +131,10 @@ void Editor::end() {
 }
 
 
-void Editor::TogglePlayMode() {
-  SceneManager::playMode = !SceneManager::playMode;
-
-  Renderer::SetCamera(SceneManager::playMode? playModeCamera : camera);
+bool Editor::IsActiveCamera() {
+  return Renderer::camera == camera;
 }
+
 
 bool Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {
   const std::filesystem::path _path = primitiveMeshFolder/(_name + ".mesh");

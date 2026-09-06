@@ -2,7 +2,8 @@
 
 #include <System.hpp>
 #include <Engine/Renderer.hpp>
-#include <Editor.hpp>
+#include <Engine/Editor.hpp>
+#include <Engine/SceneManager.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -19,7 +20,14 @@ void User::Mouse::init() {
 void User::Mouse::update() {
   const sf::Vector2i curMousePos = sf::Mouse::getPosition(*Renderer::window);
   delta = glm::ivec2(curMousePos.x, curMousePos.y) - position;
-  position += delta;
+  
+  if(SceneManager::playMode && Editor::IsActiveCamera() == false) {
+    const sf::Vector2i lockedPosition = sf::Vector2i{Renderer::window->getSize()} / 2;
+
+    sf::Mouse::setPosition(lockedPosition, *Renderer::window);
+    position = glm::ivec2(lockedPosition.x, lockedPosition.y);
+  }
+  else position += delta;
 }
 
 
@@ -30,7 +38,7 @@ void User::init() {
 void User::HandleEvent(const sf::Event &_event) {
   if(const auto *keyPressed = _event.getIf<sf::Event::KeyPressed>()) {
     if(keyPressed->code == sf::Keyboard::Key::Escape) Renderer::window->close();
-    else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::TogglePlayMode();
+    else if(keyPressed->code == sf::Keyboard::Key::F1) SceneManager::TogglePlayMode();
     
     else if(keyPressed->code == sf::Keyboard::Key::X) {
       std::stringstream ss;

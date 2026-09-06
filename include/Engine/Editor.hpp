@@ -1,16 +1,22 @@
 #pragma once
 
-#include <filesystem>
-#include <map>
+#include <Engine/EngineAPI.hpp>
 
 #include <Engine/Renderer/Camera.hpp>
 #include <Engine/Renderer/MeshRenderer.hpp>
 
+#include <filesystem>
+#include <map>
 
-class Editor {
+
+class ZENGINE_API Editor {
 public:
+  static std::filesystem::path PATH;
   static std::filesystem::path primitiveMeshFolder;
   static std::map<std::string, std::filesystem::path> primitiveMeshPaths;
+
+  static float deltaTime;
+  static glm::ivec2 mouseDelta;
 
   static std::vector<Camera*> cameras;
 
@@ -22,17 +28,14 @@ public:
   static Mesh worldGridMesh;
   static MeshRenderer worldGridRenderer;
 
-  static Camera *playModeCamera;
-  // static bool playMode;
 
-
-  static void init();
-  static void update();
+  static void init(const std::filesystem::path &_PATH);
+  static void update(float _deltaTime, const glm::ivec2 _mouseDelta);
   static void draw();
   static void end();
 
 
-  static void TogglePlayMode();
+  static bool IsActiveCamera(); //is the Editor::camera the active render target
 
 
   static bool SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name);

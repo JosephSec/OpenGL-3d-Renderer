@@ -1,38 +1,22 @@
-#include <SceneManager.hpp>
+#include <Engine/SceneManager.hpp>
 
 #include <System.hpp>
 #include <User.hpp>
 
 #include <Engine/Renderer.hpp>
-#include <Editor.hpp> 
+#include <Engine/Editor.hpp> 
 
-#include <Engine/PrimitiveMeshGenerator.hpp>
+#include <Engine/SceneManager/PrimitiveMeshGenerator.hpp>
 
 
 Scene SceneManager::scene;
 
 bool SceneManager::playMode = false;
 
-Camera *SceneManager::playerCamera = nullptr;
 float SceneManager::playerCameraXRotation = 0;
 
 
-void SceneManager::init() {
-  const std::vector<glm::vec4> colors = {
-    {1,0,0, 1},
-    {0,1,0, 1},
-    {0,0,1, 1},
-    {1,1,1, 1},
-    {0,0,0, 1},
-  };
-
-  { //Player  
-    playerCamera = new Camera(glm::vec3(0,2,0));
-    playerCamera->nearPlane = .2f;
-    Editor::playModeCamera = playerCamera;
-    Editor::cameras.push_back(playerCamera);
-  }
-}
+void SceneManager::init() {}
 void SceneManager::update() {
   if(playMode == true) scene.update();
 }
@@ -42,6 +26,11 @@ void SceneManager::draw() {
 void SceneManager::end() {}
 
 
+void SceneManager::TogglePlayMode() {
+  playMode = !playMode;
+  Renderer::SetCamera(playMode? scene.camera : Editor::camera);
+}
+
 void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform) {
   _meshRenderer.draw(_transform.getMatrix());
 }
@@ -50,7 +39,6 @@ void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const std
     _meshRenderer.draw(transform.getMatrix());
   }
 }
-
 
 void SceneManager::TestPrimitiveMeshLoading() {
   Mesh temp_mesh;

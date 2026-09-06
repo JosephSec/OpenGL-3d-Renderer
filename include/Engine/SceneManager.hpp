@@ -1,21 +1,22 @@
 #pragma once
 
+#include <Engine/EngineAPI.hpp>
+
 #include <map>
 #include <vector>
 
-#include <Engine/Scene.hpp>
+#include <Engine/SceneManager/Scene.hpp>
 #include <Engine/Renderer/Camera.hpp>
 
 #include <iostream>
 
 
-class SceneManager {
+class ZENGINE_API SceneManager {
 public:
   static Scene scene;
 
   static bool playMode;
 
-  static Camera *playerCamera;
   static float playerCameraXRotation;
 
 
@@ -25,9 +26,10 @@ public:
   static void end();
 
 
+  static void TogglePlayMode();
+
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform);
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const std::vector<Transform> &_transforms);
-
 
   static void TestPrimitiveMeshLoading();
 };

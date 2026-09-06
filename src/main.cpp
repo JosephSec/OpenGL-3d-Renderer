@@ -1,10 +1,10 @@
 #include <System.hpp>
 #include <User.hpp>
 #include <Engine/Renderer.hpp>
-#include <Editor.hpp>
-#include <SceneManager.hpp>
-#include <Engine/Scene.hpp>
-#include <Engine/PrimitiveMeshGenerator.hpp>
+#include <Engine/Editor.hpp>
+#include <Engine/SceneManager.hpp>
+#include <Engine/SceneManager/Scene.hpp>
+#include <Engine/SceneManager/PrimitiveMeshGenerator.hpp>
 
 #include <SFML/Graphics.hpp>
 #include <random>
@@ -16,7 +16,7 @@ static void init() {
   Renderer::init();
   User::init();
 
-  Editor::init();
+  Editor::init(std::filesystem::path(System::PATH));
   SceneManager::init();
 }
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   init();
 
   if constexpr(false) { //Remake Primitives
-    Mesh mesh = GeneratePyramid();
+    Mesh mesh = MeshGenerator::Pyramid();
     Editor::SaveMeshPrimitive(mesh, "pyramid");
     SceneManager::TestPrimitiveMeshLoading();
   }
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         go->meshRenderer.draw(go->transform.getMatrix());
       };
       SceneManager::scene.gameObjects.back().m_drawGizmos = [](const GameObject* go) {
-        Mesh mesh = GenerateWireSphere(24, 3);
+        Mesh mesh = MeshGenerator::WireSphere(24, 3);
         MeshRenderer(&mesh, &Renderer::UnlitShader).draw(go->transform.getMatrix());
       };
     }
@@ -78,50 +78,54 @@ int main(int argc, char *argv[]) {
       };
     }
     { //Player
-    GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Player"), &Renderer::UnlitShader));
-    gameObject.name = "Player";
+      SceneManager::scene.camera = new Camera(glm::vec3(0,2,0));
+      SceneManager::scene.camera->nearPlane = .25f;
+      Editor::cameras.push_back(SceneManager::scene.camera);
 
-    gameObject.transform.position = glm::vec3(0,1,0);
-    gameObject.transform.scale = glm::vec3(1,2,1);
+      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Player"), &Renderer::UnlitShader));
+      gameObject.name = "Player";
 
-    SceneManager::scene.gameObjects.push_back(gameObject);
-    SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
-      if(Renderer::camera == Editor::camera) return; //NEEDS TO BE REMOVED! CREATE GLOBAL RUNTIME VARIABLES FOR PLAYMODE
+      gameObject.transform.position = glm::vec3(0,1,0);
+      gameObject.transform.scale = glm::vec3(1,2,1);
 
-      { //Body Movement
-        glm::vec3 moveDir = glm::vec3(0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-        if(glm::length(moveDir) != 0) {
-          const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
-          go->transform.position += (go->transform.rotation * glm::normalize(moveDir)) * speed;
-          SceneManager::playerCamera->transform.position = go->transform.position + glm::vec3(0,1,0);
+      SceneManager::scene.gameObjects.push_back(gameObject);
+      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
+        if(Editor::IsActiveCamera()) return; //NEEDS TO BE REMOVED! CREATE GLOBAL RUNTIME VARIABLES FOR PLAYMODE
 
-          Renderer::UpdateViewMatrix();
+        { //Body Movement
+          glm::vec3 moveDir = glm::vec3(0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+          if(glm::length(moveDir) != 0) {
+            const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
+            go->transform.position += (go->transform.rotation * glm::normalize(moveDir)) * speed;
+            SceneManager::scene.camera->transform.position = go->transform.position + glm::vec3(0,1,0);
+
+            Renderer::UpdateViewMatrix();
+          }
         }
-      }
 
-      { //Camera Movement
-        if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-          const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
-          SceneManager::playerCameraXRotation = glm::clamp(SceneManager::playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
+        { //Camera Movement
+          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+            const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
+            SceneManager::playerCameraXRotation = glm::clamp(SceneManager::playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
 
-          const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-          const glm::quat pitch = glm::angleAxis(SceneManager::playerCameraXRotation, glm::vec3(1,0,0));
+            const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+            const glm::quat pitch = glm::angleAxis(SceneManager::playerCameraXRotation, glm::vec3(1,0,0));
 
-          go->transform.rotation = glm::normalize(go->transform.rotation * yaw);
-          SceneManager::playerCamera->transform.rotation = glm::normalize(go->transform.rotation * pitch);
+            go->transform.rotation = glm::normalize(go->transform.rotation * yaw);
+            SceneManager::scene.camera->transform.rotation = glm::normalize(go->transform.rotation * pitch);
 
-          Renderer::UpdateViewMatrix();
+            Renderer::UpdateViewMatrix();
+          }
         }
-      }
-    };
-    SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
-      go->meshRenderer.draw(go->transform.getMatrix());
-    };
-  }
+      };
+      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
+        go->meshRenderer.draw(go->transform.getMatrix());
+      };
+    }
   }
 
 
@@ -138,7 +142,7 @@ int main(int argc, char *argv[]) {
     { //Update
       System::update();
       User::Mouse::update();
-      Editor::update();
+      Editor::update(System::deltaTime, User::Mouse::delta);
 
       animationT += System::deltaTime;
       SceneManager::update();
