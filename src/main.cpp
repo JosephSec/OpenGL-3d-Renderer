@@ -17,7 +17,7 @@ static void init() {
   User::init();
 
   Editor::init();
-  // SceneManager::init();
+  SceneManager::init();
 }
 
 
@@ -31,39 +31,97 @@ int main(int argc, char *argv[]) {
   }
   
 
-  Scene scene;
-
   static float animationT = 0;
+  { //Init Scene
+    { //Load Meshes
+      Mesh mesh;
+      Editor::LoadMeshPrimitive(mesh, "cube");
+      SceneManager::scene.LoadMeshToScene("Cube", mesh);
 
-  { //Load Meshes
-    Mesh mesh;
-    Editor::LoadMeshPrimitive(mesh, "cube");
-    scene.LoadMeshToScene("cube", mesh);
+      Editor::LoadMeshPrimitive(mesh, "quad");
+      Editor::RandomizeMeshColors(mesh, {{0,0,0, 1}});
+      SceneManager::scene.LoadMeshToScene("Ground", mesh);
 
-    Editor::LoadMeshPrimitive(mesh, "quad");
-    scene.LoadMeshToScene("quad", mesh);
-  }
+      Editor::LoadMeshPrimitive(mesh, "cylinder");
+      Editor::RandomizeMeshColors(mesh, {{1,0,0, 1}});
+      SceneManager::scene.LoadMeshToScene("Player", mesh);
+    }
 
-  { //Cube
-    scene.gameObjects.emplace_back(GameObject{MeshRenderer(scene.GetMeshFromScene("cube"), &Renderer::UnlitShader), Transform()});
-    scene.gameObjects.back().m_update = [](GameObject* go) {
-      go->transform.position.y = 1.5 + glm::sin(animationT);
-      go->transform.rotation = glm::angleAxis(animationT, glm::vec3(0,1,0));
+    { //Cube
+      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Cube"), &Renderer::UnlitShader));
+      gameObject.name = "Cube";
+
+      SceneManager::scene.gameObjects.push_back(gameObject);
+      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
+        go->transform.position = glm::vec3(0,1.5 + glm::sin(animationT), -5);
+        go->transform.rotation = glm::angleAxis(animationT, glm::vec3(0,1,0));
+      };
+      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
+        go->meshRenderer.draw(go->transform.getMatrix());
+      };
+      SceneManager::scene.gameObjects.back().m_drawGizmos = [](const GameObject* go) {
+        Mesh mesh = GenerateWireSphere(24, 3);
+        MeshRenderer(&mesh, &Renderer::UnlitShader).draw(go->transform.getMatrix());
+      };
+    }
+    { //Ground
+      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Ground"), &Renderer::UnlitShader));
+      gameObject.name = "Ground";
+
+      gameObject.transform.rotation = glm::angleAxis(glm::radians<float>(-90), glm::vec3(1,0,0));
+      gameObject.transform.scale = glm::vec3(30,30,1);
+
+      SceneManager::scene.gameObjects.push_back(gameObject);
+      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {};
+      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
+        go->meshRenderer.draw(go->transform.getMatrix());
+      };
+    }
+    { //Player
+    GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Player"), &Renderer::UnlitShader));
+    gameObject.name = "Player";
+
+    gameObject.transform.position = glm::vec3(0,1,0);
+    gameObject.transform.scale = glm::vec3(1,2,1);
+
+    SceneManager::scene.gameObjects.push_back(gameObject);
+    SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
+      if(Renderer::camera == Editor::camera) return; //NEEDS TO BE REMOVED! CREATE GLOBAL RUNTIME VARIABLES FOR PLAYMODE
+
+      { //Body Movement
+        glm::vec3 moveDir = glm::vec3(0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+        if(glm::length(moveDir) != 0) {
+          const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
+          go->transform.position += (go->transform.rotation * glm::normalize(moveDir)) * speed;
+          SceneManager::playerCamera->transform.position = go->transform.position + glm::vec3(0,1,0);
+
+          Renderer::UpdateViewMatrix();
+        }
+      }
+
+      { //Camera Movement
+        if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+          const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
+          SceneManager::playerCameraXRotation = glm::clamp(SceneManager::playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
+
+          const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+          const glm::quat pitch = glm::angleAxis(SceneManager::playerCameraXRotation, glm::vec3(1,0,0));
+
+          go->transform.rotation = glm::normalize(go->transform.rotation * yaw);
+          SceneManager::playerCamera->transform.rotation = glm::normalize(go->transform.rotation * pitch);
+
+          Renderer::UpdateViewMatrix();
+        }
+      }
     };
-    scene.gameObjects.back().m_draw = [](const GameObject* go) {
+    SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
       go->meshRenderer.draw(go->transform.getMatrix());
     };
   }
-  { //Ground
-    GameObject gameObject = GameObject{MeshRenderer(scene.GetMeshFromScene("quad"), &Renderer::UnlitShader), Transform()};
-    gameObject.transform.rotation = glm::angleAxis(glm::radians<float>(-90), glm::vec3(1,0,0));
-    gameObject.transform.scale = glm::vec3(30,30,1);
-
-    scene.gameObjects.push_back(gameObject);
-    scene.gameObjects.back().m_update = [](GameObject* go) {};
-    scene.gameObjects.back().m_draw = [](const GameObject* go) {
-      go->meshRenderer.draw(go->transform.getMatrix());
-    };
   }
 
 
@@ -81,17 +139,15 @@ int main(int argc, char *argv[]) {
       System::update();
       User::Mouse::update();
       Editor::update();
-      // SceneManager::update();
 
       animationT += System::deltaTime;
-      scene.update();
+      SceneManager::update();
     }
 
     { //Render
       Renderer::clear();
 
-      // SceneManager::draw();
-      scene.draw();
+      SceneManager::draw();
       Editor::draw();
 
       Renderer::display();

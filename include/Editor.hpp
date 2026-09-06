@@ -19,10 +19,11 @@ public:
   static float slowModeSpeed;
   static float fastModeSpeed;
 
+  static Mesh worldGridMesh;
   static MeshRenderer worldGridRenderer;
 
   static Camera *playModeCamera;
-  static bool playMode;
+  // static bool playMode;
 
 
   static void init();

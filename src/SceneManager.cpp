@@ -9,12 +9,9 @@
 #include <Engine/PrimitiveMeshGenerator.hpp>
 
 
-std::map<std::string, Mesh*> SceneManager::sceneMeshes;
-std::vector<GameObject_OLD*> SceneManager::gameObjects;
+Scene SceneManager::scene;
 
-float SceneManager::animationT = 0;
-GameObject_OLD *SceneManager::itemDropObject = nullptr;
-GameObject_OLD *SceneManager::playerObject = nullptr;
+bool SceneManager::playMode = false;
 
 Camera *SceneManager::playerCamera = nullptr;
 float SceneManager::playerCameraXRotation = 0;
@@ -29,40 +26,7 @@ void SceneManager::init() {
     {0,0,0, 1},
   };
 
-  for(int i = 0; i < Editor::primitiveMeshPaths.size(); i++) {
-    Mesh *mesh = LoadMeshToScene(std::next(Editor::primitiveMeshPaths.begin(), i)->first);
-
-    MeshRenderer meshRenderer(mesh, &Renderer::UnlitShader);
-    gameObjects.push_back(new GameObject_OLD{meshRenderer, Transform(glm::vec3(i * 2, 0, 0))});
-  }
-
-
-  { //Ground
-    Mesh *mesh = CopySceneMesh("quad", "ground");
-    Editor::RandomizeMeshColors(*mesh, {{0,0,0, 1}});
-
-    MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
-    gameObjects.push_back(new GameObject_OLD{groundMeshRenderer, Transform(glm::vec3(0), glm::rotate(glm::mat4x4(1), glm::radians<float>(-90), glm::vec3(1,0,0)), glm::vec3(30,30,1))});
-  }
-
-  { //Item Drop
-    Mesh *mesh = CopySceneMesh("cube", "itemDrop");
-    Editor::RandomizeMeshColors(*mesh, colors);
-
-    MeshRenderer groundMeshRenderer(mesh, &Renderer::UnlitShader);
-    itemDropObject = new GameObject_OLD{groundMeshRenderer, Transform(glm::vec3(0,1,-5), glm::quat(), glm::vec3(.5f))};
-    gameObjects.push_back(itemDropObject);
-  }
-
-  { //Player
-    Mesh playerBodyMesh = GenerateCylinder(12, 2, .5f);
-    Editor::RandomizeMeshColors(playerBodyMesh, {{1,0,0,1}});
-    Mesh *mesh = LoadMeshToScene(playerBodyMesh, "playerBody");
-
-    MeshRenderer playerRenderer(mesh, &Renderer::UnlitShader);
-    playerObject = new GameObject_OLD{playerRenderer, Transform(glm::vec3(0,1,0))};
-    gameObjects.push_back(playerObject);
-  
+  { //Player  
     playerCamera = new Camera(glm::vec3(0,2,0));
     playerCamera->nearPlane = .2f;
     Editor::playModeCamera = playerCamera;
@@ -70,94 +34,12 @@ void SceneManager::init() {
   }
 }
 void SceneManager::update() {
-  animationT += System::deltaTime * 100;
-
-  if(Editor::playMode) {
-    if(itemDropObject != nullptr) { //Item Drop Movement
-      itemDropObject->transform.position = glm::vec3(0,1 + glm::sin(glm::radians<float>(animationT)) * .25,-5);
-      itemDropObject->transform.rotation = glm::angleAxis(glm::radians<float>(animationT), glm::vec3(0,1,0));
-    }
-
-    { //Player Movement
-      glm::vec3 moveDir = glm::vec3(0);
-      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-      if(glm::length(moveDir) != 0) {
-        const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
-        playerObject->transform.position += (playerObject->transform.rotation * glm::normalize(moveDir)) * speed;
-        playerCamera->transform.position = playerObject->transform.position + glm::vec3(0,1,0);
-
-        Renderer::UpdateViewMatrix();
-      }
-
-      if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-        const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
-        playerCameraXRotation = glm::clamp(playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
-
-        const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-        const glm::quat pitch = glm::angleAxis(playerCameraXRotation, glm::vec3(1,0,0));
-
-        playerObject->transform.rotation = glm::normalize(playerObject->transform.rotation * yaw);
-        playerCamera->transform.rotation = glm::normalize(playerObject->transform.rotation * pitch);
-
-        Renderer::UpdateViewMatrix();
-      }
-
-
-      if(itemDropObject != nullptr && glm::length(playerObject->transform.position - itemDropObject->transform.position) <= 1) {
-        for(int i = 0; i < gameObjects.size(); i++) {
-          if(gameObjects[i] != itemDropObject) continue;
-
-          std::swap(gameObjects[i], gameObjects.back());
-          gameObjects.pop_back();
-          delete itemDropObject;
-          itemDropObject = nullptr;
-          break;
-        }
-      }
-    }
-  }
+  if(playMode == true) scene.update();
 }
 void SceneManager::draw() {
-  for(const GameObject_OLD *gameObject : gameObjects) gameObject->draw();
+  scene.draw();
 }
-void SceneManager::end() {
-  for(const auto &[name, meshPtr] : sceneMeshes) delete meshPtr;
-  for(GameObject_OLD *gameObject : gameObjects) delete gameObject;
-}
-
-
-Mesh *SceneManager::LoadMeshToScene(const std::string &_name) {
-  Mesh *mesh = new Mesh();
-  if(Editor::LoadMeshPrimitive(*mesh, _name) == false) {
-    std::cout << "[SceneManager Error]: Failed to load mesh: " << _name << '\n';
-    delete mesh;
-    return nullptr;
-  }
-
-  sceneMeshes[_name] = mesh;
-  return mesh;
-}
-Mesh *SceneManager::LoadMeshToScene(Mesh &_mesh, const std::string &_name) {
-  sceneMeshes[_name] = new Mesh(_mesh);
-  return sceneMeshes[_name];
-}
-
-Mesh *SceneManager::GetSceneMesh(const std::string &_name) {
-  const auto &it = sceneMeshes.find(_name);
-  if(it != sceneMeshes.end()) return it->second;
-
-  std::cout << "[SceneManager Error]: GetSceneMesh(" << _name << ") returned nullptr, mush was not found\n";
-  return nullptr;
-}
-Mesh *SceneManager::CopySceneMesh(const std::string &_name, const std::string &_copyName) {
-  Mesh *mesh = GetSceneMesh(_name);
-  if(mesh == nullptr) return nullptr;
-
-  return LoadMeshToScene(*mesh, _copyName);
-}
+void SceneManager::end() {}
 
 
 void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform) {

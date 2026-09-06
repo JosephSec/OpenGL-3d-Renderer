@@ -3,31 +3,17 @@
 #include <map>
 #include <vector>
 
-#include <Engine/Renderer/MeshRenderer.hpp>
+#include <Engine/Scene.hpp>
 #include <Engine/Renderer/Camera.hpp>
-#include <Engine/Transform.hpp>
 
 #include <iostream>
 
 
-struct GameObject_OLD {
-public:
-  MeshRenderer meshRenderer;
-  Transform transform;
-
-  inline void draw() const {
-    meshRenderer.draw(transform.getMatrix());
-  }
-};
 class SceneManager {
 public:
-  static std::map<std::string, Mesh*> sceneMeshes;
-  static std::vector<GameObject_OLD*> gameObjects;
+  static Scene scene;
 
-
-  static float animationT;
-  static GameObject_OLD *itemDropObject;
-  static GameObject_OLD *playerObject;
+  static bool playMode;
 
   static Camera *playerCamera;
   static float playerCameraXRotation;
@@ -37,13 +23,6 @@ public:
   static void update();
   static void draw();
   static void end();
-
-
-  static Mesh *LoadMeshToScene(const std::string &_name);
-  static Mesh *LoadMeshToScene(Mesh &_mesh, const std::string &_name);
-
-  static Mesh *GetSceneMesh(const std::string &_name);
-  static Mesh *CopySceneMesh(const std::string &_name, const std::string &_copyName);
 
 
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform);

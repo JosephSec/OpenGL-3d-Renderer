@@ -20,10 +20,11 @@ float Editor::sensitivity = 1;
 float Editor::slowModeSpeed = 10;
 float Editor::fastModeSpeed = 20;
 
+Mesh Editor::worldGridMesh;
 MeshRenderer Editor::worldGridRenderer;
 
 Camera *Editor::playModeCamera = nullptr;
-bool Editor::playMode = false;
+// bool Editor::playMode = false;
 
 
 void Editor::init() {
@@ -36,7 +37,7 @@ void Editor::init() {
 
   camera = new Camera();
   camera->farPlane = 500;
-  camera->fov = 175;
+  camera->fov = 90;
 
   Renderer::camera = camera;
   cameras.push_back(Renderer::camera);
@@ -46,27 +47,26 @@ void Editor::init() {
   Renderer::UpdateViewMatrix();
 
 
-  Mesh tempMesh = GenerateGrid(glm::ivec2(30,30), 1);
+  worldGridMesh = GenerateGrid(glm::ivec2(30,30), 1);
 
-  const uint32_t gridMeshHalf = tempMesh.vertices.size() / 2;
+  const uint32_t gridMeshHalf = worldGridMesh.vertices.size() / 2;
 
   for(int i = 0; i < gridMeshHalf / 2; i++) {
     const float alpha = (((i + 5) % 10) == 0)? .75f : .25f;
 
     const uint32_t startA = i * 2;
-    tempMesh.vertices[startA + 0].color = glm::vec4{alpha,alpha,alpha, 1};
-    tempMesh.vertices[startA + 1].color = glm::vec4{alpha,alpha,alpha, 1};
+    worldGridMesh.vertices[startA + 0].color = glm::vec4{alpha,alpha,alpha, alpha};
+    worldGridMesh.vertices[startA + 1].color = glm::vec4{alpha,alpha,alpha, alpha};
 
     const uint32_t startB = gridMeshHalf + i * 2;
-    tempMesh.vertices[startB + 0].color = glm::vec4{alpha,alpha,alpha, 1};
-    tempMesh.vertices[startB + 1].color = glm::vec4{alpha,alpha,alpha, 1};
+    worldGridMesh.vertices[startB + 0].color = glm::vec4{alpha,alpha,alpha, alpha};
+    worldGridMesh.vertices[startB + 1].color = glm::vec4{alpha,alpha,alpha, alpha};
   }
 
-  Mesh *worldGridMesh = SceneManager::LoadMeshToScene(tempMesh, "World Grid");
-  worldGridRenderer = MeshRenderer(worldGridMesh, &Renderer::UnlitShader);
+  worldGridRenderer = MeshRenderer(&worldGridMesh, &Renderer::UnlitShader);
 }
 void Editor::update() {
-  if(playMode == false) {
+  if(Renderer::camera == camera) { //if editor camera is active render target
     if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
       glm::vec3 moveDir = glm::vec3(0);
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
@@ -93,6 +93,8 @@ void Editor::update() {
   }
 }
 void Editor::draw() {
+  if(Renderer::camera != camera) return; //if editor camera is not active render target
+
   Renderer::ClearDepthBuffer();
   worldGridRenderer.draw(glm::mat4x4(1));
 
@@ -117,19 +119,7 @@ void Editor::draw() {
     lineRenderer.draw(_camera->transform.getMatrix());
   }
 
-  if constexpr(false) {
-    if(SceneManager::itemDropObject != nullptr) {
-      Mesh wireSphere = GenerateWireSphere(24, 1);
-      RandomizeMeshColors(wireSphere, {{0,1,0,1}});
-      MeshRenderer wireSphereRenderer(&wireSphere, &Renderer::UnlitShader);
-      wireSphereRenderer.draw(Transform(SceneManager::itemDropObject->transform.position).getMatrix());
-
-      Mesh arrowMesh = GeneratePyramid(4, 1, .25f);
-      RandomizeMeshColors(arrowMesh, {{0,1,0,1}});
-      MeshRenderer arrowRenderer(&arrowMesh, &Renderer::UnlitShader);
-      arrowRenderer.draw(Transform(SceneManager::itemDropObject->transform.position + glm::vec3(0,2,0), glm::angleAxis(glm::radians<float>(180), glm::vec3(1,0,0))).getMatrix());
-    }
-  }
+  SceneManager::scene.drawGizmos();
 }
 void Editor::end() {
   for(Camera *cameraPtr : cameras) delete cameraPtr;
@@ -137,9 +127,9 @@ void Editor::end() {
 
 
 void Editor::TogglePlayMode() {
-  playMode = !playMode;
+  SceneManager::playMode = !SceneManager::playMode;
 
-  Renderer::SetCamera(playMode? playModeCamera : camera);
+  Renderer::SetCamera(SceneManager::playMode? playModeCamera : camera);
 }
 
 bool Editor::SaveMeshPrimitive(const Mesh &_mesh, const std::string &_name) {

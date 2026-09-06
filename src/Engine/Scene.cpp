@@ -10,25 +10,31 @@ GameObject::GameObject(const MeshRenderer &_meshRenderer, const Transform &_tran
 Scene::Scene() {}
 
 void Scene::update() {
-  for(GameObject &gameObject : gameObjects) gameObject.update();
+  for(GameObject &gameObject : gameObjects) {
+    if(gameObject.isActive == true) gameObject.update();
+  }
 }
 void Scene::draw() const {
-  for(const GameObject &gameObject : gameObjects) gameObject.draw();
+  for(const GameObject &gameObject : gameObjects) {
+    if(gameObject.isActive == true) gameObject.draw();
+  }
+}
+void Scene::drawGizmos() const {
+  for(const GameObject &gameObject : gameObjects) {
+    if(gameObject.isActive == true) gameObject.drawGizmos();
+  }
 }
 
 Mesh *Scene::LoadMeshToScene(const std::string &_name, const Mesh &_mesh) {
-  if(meshIndices.find(_name) != meshIndices.end()) {
+  if(meshes.find(_name) != meshes.end()) {
     std::cout << "Scene::LoadMeshToScene: Mesh with name '" << _name << "' already exists in scene. Returning existing mesh." << std::endl;
-    return &meshes[meshIndices[_name]];
+    return &meshes[_name];
   }
 
-  meshes.push_back(_mesh);
-  meshIndices[_name] = meshes.size() - 1;
-
-  return &meshes.back();
+  meshes.insert({_name, _mesh});
+  return &meshes[_name];
 }
-
 Mesh *Scene::GetMeshFromScene(const std::string &_name) {
-  if(meshIndices.find(_name) == meshIndices.end()) return nullptr;
-  return &meshes[meshIndices[_name]];
+  if(meshes.find(_name) == meshes.end()) return nullptr;
+  return &meshes[_name];
 }
