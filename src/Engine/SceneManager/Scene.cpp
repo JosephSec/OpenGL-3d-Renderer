@@ -8,6 +8,10 @@ GameObject::GameObject(const MeshRenderer &_meshRenderer, const Transform &_tran
 
 
 Scene::Scene() {}
+Scene::Scene(const Scene &_scene) {}
+Scene::~Scene() {
+  delete camera;
+}
 
 void Scene::update() {
   for(GameObject &gameObject : gameObjects) {

@@ -149,6 +149,44 @@ public:
 
     return mesh;
   }
+  static Mesh UVSphere(uint16_t _segments = 16, uint16_t _rings = 16, float _radius = .5f) {
+    Mesh mesh;
+
+    for(unsigned int r = 0; r <= _rings; ++r) {
+      float theta = r * glm::pi<float>() / _rings;
+      float sinTheta = std::sin(theta);
+      float cosTheta = std::cos(theta);
+
+      for(unsigned int s = 0; s <= _segments; ++s) {
+        float phi = s * glm::two_pi<float>() / _segments;
+        float sinPhi = std::sin(phi);
+        float cosPhi = std::cos(phi);
+
+
+        mesh.vertices.push_back(Mesh::Vertex{
+          {_radius * sinTheta * cosPhi, _radius * cosTheta,_radius * sinTheta * sinPhi},
+          {1,1,1, 1}
+        });
+      }
+    }
+
+    for(unsigned int r = 0; r < _rings; ++r) {
+      for(unsigned int s = 0; s < _segments; ++s) {
+        unsigned int first = r * (_segments + 1) + s;
+        unsigned int second = first + _segments + 1;
+
+        mesh.indices.push_back(first);
+        mesh.indices.push_back(second);
+        mesh.indices.push_back(first + 1);
+
+        mesh.indices.push_back(first + 1);
+        mesh.indices.push_back(second);
+        mesh.indices.push_back(second + 1);
+      }
+    }
+
+    return mesh;
+  }
 
   static Mesh Grid(const glm::ivec2 _size, float _spacing = 1) {
     Mesh mesh(MeshType::Lines);

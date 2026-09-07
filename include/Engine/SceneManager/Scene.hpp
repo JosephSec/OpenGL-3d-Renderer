@@ -12,7 +12,7 @@
 
 struct ZENGINE_API GameObject {
 public:
-  GameObject(const MeshRenderer &_meshRenderer, const Transform &_transform = Transform());
+  GameObject(const MeshRenderer &_meshRenderer = MeshRenderer(), const Transform &_transform = Transform());
 
   void update() {
     if(m_update != nullptr) m_update(this);
@@ -44,6 +44,8 @@ public:
 
 
   Scene();
+  Scene(const Scene &_scene);
+  ~Scene();
 
   void update();
   void draw() const;

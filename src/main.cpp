@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
   }
   
 
+  static float itemDropDist = 3;
   static float animationT = 0;
   { //Init Scene
     { //Load Meshes
@@ -45,11 +46,16 @@ int main(int argc, char *argv[]) {
       Editor::LoadMeshPrimitive(mesh, "cylinder");
       Editor::RandomizeMeshColors(mesh, {{1,0,0, 1}});
       SceneManager::scene.LoadMeshToScene("Player", mesh);
+
+      mesh = MeshGenerator::UVSphere();
+      SceneManager::scene.LoadMeshToScene("UV-Sphere", mesh);
     }
 
-    { //Cube
+    { //Item Drop
       GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Cube"), &Renderer::UnlitShader));
-      gameObject.name = "Cube";
+      gameObject.name = "Item Drop";
+
+      gameObject.transform.position = glm::vec3(0,1.5, -5);
 
       SceneManager::scene.gameObjects.push_back(gameObject);
       SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
@@ -60,7 +66,7 @@ int main(int argc, char *argv[]) {
         go->meshRenderer.draw(go->transform.getMatrix());
       };
       SceneManager::scene.gameObjects.back().m_drawGizmos = [](const GameObject* go) {
-        Mesh mesh = MeshGenerator::WireSphere(24, 3);
+        Mesh mesh = MeshGenerator::WireSphere(24, itemDropDist);
         MeshRenderer(&mesh, &Renderer::UnlitShader).draw(go->transform.getMatrix());
       };
     }
@@ -121,7 +127,32 @@ int main(int argc, char *argv[]) {
             Renderer::UpdateViewMatrix();
           }
         }
+      
+        { //Item Drop Interaction
+          for(GameObject &gameObject : SceneManager::scene.gameObjects) {
+            if(gameObject.name != "Item Drop" || gameObject.isActive == false) continue;
+
+            if(glm::length(gameObject.transform.position - go->transform.position) <= itemDropDist) {
+              gameObject.isActive = false;
+            }
+
+            break;
+          }
+        }
       };
+      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
+        go->meshRenderer.draw(go->transform.getMatrix());
+      };
+    }
+    { //UV-Sphere
+      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("UV-Sphere"), &Renderer::UnlitShader));
+      gameObject.name = "UV-Sphere";
+
+      gameObject.transform.position = glm::vec3(3,3,-3);
+      // gameObject.transform.scale = glm::vec3(.25f);
+
+      SceneManager::scene.gameObjects.push_back(gameObject);
+      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {};
       SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
         go->meshRenderer.draw(go->transform.getMatrix());
       };
