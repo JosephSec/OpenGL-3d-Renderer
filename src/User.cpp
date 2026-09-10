@@ -38,7 +38,9 @@ void User::init() {
 void User::HandleEvent(const sf::Event &_event) {
   if(const auto *keyPressed = _event.getIf<sf::Event::KeyPressed>()) {
     if(keyPressed->code == sf::Keyboard::Key::Escape) Renderer::window->close();
-    else if(keyPressed->code == sf::Keyboard::Key::F1) SceneManager::TogglePlayMode();
+    else if(keyPressed->code == sf::Keyboard::Key::F1) SceneManager::TogglePlayMode(true);
+    else if(keyPressed->code == sf::Keyboard::Key::F2) SceneManager::TogglePlayMode(false);
+    else if(keyPressed->code == sf::Keyboard::Key::F3) Editor::TogglePlayModeGizmos();
     
     else if(keyPressed->code == sf::Keyboard::Key::X) {
       std::stringstream ss;

@@ -29,7 +29,13 @@ int main(int argc, char *argv[]) {
     Editor::SaveMeshPrimitive(mesh, "pyramid");
     SceneManager::TestPrimitiveMeshLoading();
   }
-  
+  if constexpr(true) { //Log Control Keys
+    std::cout <<
+      "F1: Toggle Play Mode" << '\n' <<
+      "F2: Toggle Play Mode (Unfocused)" << '\n' <<
+      "F3: Toggle Debug in Play Mode" << '\n';
+  }
+
 
   static float itemDropDist = 3;
   static float animationT = 0;
@@ -156,6 +162,15 @@ int main(int argc, char *argv[]) {
       SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
         go->meshRenderer.draw(go->transform.getMatrix());
       };
+    }
+  
+    { //Rigidbodys
+      Rigidbody::gravityDirection = glm::vec3(0,-1,0);
+      Rigidbody::gravityStrength = 9.806f;
+
+      for(int i = 0; i < 10; i++) {
+        SceneManager::scene.rigidbodys.push_back(Rigidbody(Transform(glm::vec3(-5, 5 + i, -5)), 1, glm::vec3(0,i,0)));
+      }
     }
   }
 

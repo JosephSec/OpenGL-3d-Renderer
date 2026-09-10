@@ -17,6 +17,8 @@ std::map<std::string, std::filesystem::path> Editor::primitiveMeshPaths;
 float Editor::deltaTime = 0;
 glm::ivec2 Editor::mouseDelta = glm::ivec2(0);
 
+bool Editor::PlayModeGizmos = false;
+
 std::vector<Camera*> Editor::cameras;
 
 Camera *Editor::camera;
@@ -95,10 +97,19 @@ void Editor::update(float _deltaTime, const glm::ivec2 _mouseDelta) {
 
       Renderer::UpdateViewMatrix();
     }
+    else if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle)) {
+      if(glm::length(glm::vec2(mouseDelta)) != 0) {
+        const glm::vec2 lookDelta = glm::vec2(mouseDelta.x, -mouseDelta.y) * sensitivity * deltaTime;
+        camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
+
+        Renderer::UpdateViewMatrix();
+      }      
+    }
   }
 }
 void Editor::draw() {
-  if(IsActiveCamera() == false) return; //if editor camera is not active render target
+  //if editor camera is not active render target and PlayModeGizmos is disabled
+  if(IsActiveCamera() == false && PlayModeGizmos == false) return;
 
   Renderer::ClearDepthBuffer();
   worldGridRenderer.draw(glm::mat4x4(1));
@@ -128,6 +139,11 @@ void Editor::draw() {
 }
 void Editor::end() {
   for(Camera *cameraPtr : cameras) delete cameraPtr;
+}
+
+
+void Editor::TogglePlayModeGizmos() {
+  PlayModeGizmos = !PlayModeGizmos;
 }
 
 

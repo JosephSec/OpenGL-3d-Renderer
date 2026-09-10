@@ -2,9 +2,12 @@
 
 #include <Engine/EngineAPI.hpp>
 
-#include <Engine/SceneManager/Transform.hpp>
 #include <Engine/Renderer/MeshRenderer.hpp>
 #include <Engine/Renderer/Camera.hpp>
+
+#include <Engine/SceneManager/Transform.hpp>
+
+#include <Engine/Physics/Rigidbody.hpp>
 
 #include <map>
 #include <functional>
@@ -39,6 +42,7 @@ class ZENGINE_API Scene {
 public:
   std::map<std::string, Mesh> meshes;
   std::vector<GameObject> gameObjects;
+  std::vector<Rigidbody> rigidbodys;
 
   Camera *camera;
 

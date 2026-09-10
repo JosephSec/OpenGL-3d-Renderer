@@ -26,9 +26,11 @@ void SceneManager::draw() {
 void SceneManager::end() {}
 
 
-void SceneManager::TogglePlayMode() {
+void SceneManager::TogglePlayMode(bool _focused) {
   playMode = !playMode;
-  Renderer::SetCamera(playMode? scene.camera : Editor::camera);
+  if(_focused) {
+    Renderer::SetCamera(playMode? scene.camera : Editor::camera);
+  }
 }
 
 void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform) {

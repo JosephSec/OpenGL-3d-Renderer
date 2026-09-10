@@ -18,6 +18,8 @@ public:
   static float deltaTime;
   static glm::ivec2 mouseDelta;
 
+  static bool PlayModeGizmos;
+
   static std::vector<Camera*> cameras;
 
   static Camera *camera;
@@ -33,6 +35,9 @@ public:
   static void update(float _deltaTime, const glm::ivec2 _mouseDelta);
   static void draw();
   static void end();
+
+
+  static void TogglePlayModeGizmos();
 
 
   static bool IsActiveCamera(); //is the Editor::camera the active render target

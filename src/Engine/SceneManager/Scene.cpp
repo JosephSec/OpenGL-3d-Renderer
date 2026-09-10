@@ -17,15 +17,24 @@ void Scene::update() {
   for(GameObject &gameObject : gameObjects) {
     if(gameObject.isActive == true) gameObject.update();
   }
+  for(Rigidbody &rigidbody : rigidbodys) {
+    rigidbody.update();
+  }
 }
 void Scene::draw() const {
   for(const GameObject &gameObject : gameObjects) {
     if(gameObject.isActive == true) gameObject.draw();
   }
+  for(const Rigidbody &rigidbody : rigidbodys) {
+    rigidbody.draw();
+  }
 }
 void Scene::drawGizmos() const {
   for(const GameObject &gameObject : gameObjects) {
     if(gameObject.isActive == true) gameObject.drawGizmos();
+  }
+  for(const Rigidbody &rigidbody : rigidbodys) {
+    rigidbody.drawGizmos();
   }
 }
 
