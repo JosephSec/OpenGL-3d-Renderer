@@ -15,8 +15,6 @@ class ZENGINE_API SceneManager {
 public:
   static Scene scene;
 
-  static bool playMode;
-
   static float playerCameraXRotation;
 
 
@@ -25,8 +23,6 @@ public:
   static void draw();
   static void end();
 
-
-  static void TogglePlayMode(bool _focused);
 
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform);
   static void DrawMeshRenderer(const MeshRenderer &_meshRenderer, const std::vector<Transform> &_transforms);

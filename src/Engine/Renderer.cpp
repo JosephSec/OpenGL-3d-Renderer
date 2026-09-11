@@ -8,7 +8,7 @@
 sf::RenderWindow *Renderer::window;
 glm::ivec2 Renderer::windowSize;
 
-bool Renderer::wireframeMode = false;
+bool Renderer::WireframeMode = false;
 Shader Renderer::UnlitShader;
 
 Camera *Renderer::camera;
@@ -20,18 +20,10 @@ static void initGL() {
   GLenum err = glewInit();
   if(err != GLEW_OK) std::cout << "GLEW init error: " << glewGetErrorString(err) << '\n';
 
-  glEnable(GL_DEPTH_TEST);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CW);
-
+  Renderer::SetState(RenderState::OpenGL);
   glClearColor(.1,.1,.15, 1);
 }
-void Renderer::init() {
+void Renderer::init(const sf::Vector2u _windowSize, const std::string _windowName) {
   sf::ContextSettings settings;
   settings.depthBits = 24;
   settings.stencilBits = 8;
@@ -40,7 +32,7 @@ void Renderer::init() {
   settings.minorVersion = 3;
   settings.attributeFlags = sf::ContextSettings::Default;
 
-  window = new sf::RenderWindow(sf::VideoMode{{800,600}}, "OpenGL 3d Renderer", sf::State::Windowed, settings);
+  window = new sf::RenderWindow(sf::VideoMode{_windowSize}, _windowName, sf::State::Windowed, settings);
   window->setVerticalSyncEnabled(true);
   // window->setFramerateLimit(60);
 
@@ -68,11 +60,40 @@ void Renderer::display() {
 }
 
 
+void Renderer::SetState(RenderState _state) {
+  switch(_state) {
+    case RenderState::UI:
+      window->resetGLStates();
+
+      ClearDepthBuffer();
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+      glUseProgram(0);
+      glBindVertexArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      break;
+
+    case RenderState::OpenGL:
+      glEnable(GL_DEPTH_TEST);
+
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glFrontFace(GL_CW);
+
+      glPolygonMode(GL_FRONT_AND_BACK, WireframeMode? GL_LINE : GL_FILL);
+      break;
+  }
+}
 void Renderer::SetCamera(Camera *_camera) {
   camera = _camera;
   UpdateViewMatrix();
   UpdateProjectionMatrix();
 }
+
 void Renderer::UpdateProjectionMatrix() {
   if(camera == nullptr) {
     std::cout << "[Renderer Error]: Cannot update projection matrix: Camera is nullptr\n";
@@ -103,6 +124,6 @@ void Renderer::HandleResize() {
 }
 
 void Renderer::ToggleWireframeMode(bool _enable) {
-  wireframeMode = _enable;
+  WireframeMode = _enable;
   glPolygonMode(GL_FRONT_AND_BACK, _enable? GL_LINE : GL_FILL);
 }

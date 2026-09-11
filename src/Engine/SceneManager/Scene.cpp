@@ -1,5 +1,7 @@
 #include <Engine/SceneManager/Scene.hpp>
 
+#include <Engine/Editor.hpp>
+
 #include <iostream>
 
 
@@ -16,9 +18,6 @@ Scene::~Scene() {
 void Scene::update() {
   for(GameObject &gameObject : gameObjects) {
     if(gameObject.isActive == true) gameObject.update();
-  }
-  for(Rigidbody &rigidbody : rigidbodys) {
-    rigidbody.update();
   }
 }
 void Scene::draw() const {

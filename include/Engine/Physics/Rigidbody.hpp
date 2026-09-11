@@ -8,10 +8,6 @@
 
 class ZENGINE_API Rigidbody {
 public:
-  static glm::vec3 gravityDirection;
-  static float gravityStrength;
-
-
   Rigidbody(
     const Transform &_transform,
     float _mass = 1,
@@ -19,7 +15,7 @@ public:
     float _radius = .5
   );
 
-  void update();
+  void fixedUpdate();
   void draw() const;
   void drawGizmos() const;
 

@@ -17,6 +17,8 @@ std::map<std::string, std::filesystem::path> Editor::primitiveMeshPaths;
 float Editor::deltaTime = 0;
 glm::ivec2 Editor::mouseDelta = glm::ivec2(0);
 
+bool Editor::PlayModePaused = true;
+bool Editor::PlayModeFocused = true;
 bool Editor::PlayModeGizmos = false;
 
 std::vector<Camera*> Editor::cameras;
@@ -142,8 +144,17 @@ void Editor::end() {
 }
 
 
-void Editor::TogglePlayModeGizmos() {
-  PlayModeGizmos = !PlayModeGizmos;
+void Editor::TogglePlayModePaused(bool _enable) {
+  PlayModePaused = _enable;
+  if(PlayModeFocused) {
+    Renderer::SetCamera(PlayModePaused? camera : SceneManager::scene.camera);
+  }
+}
+void Editor::TogglePlayModeFocused(bool _enable) {
+  PlayModeFocused = _enable;
+}
+void Editor::TogglePlayModeGizmos(bool _enable) {
+  PlayModeGizmos = _enable;
 }
 
 

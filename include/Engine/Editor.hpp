@@ -18,6 +18,8 @@ public:
   static float deltaTime;
   static glm::ivec2 mouseDelta;
 
+  static bool PlayModePaused;
+  static bool PlayModeFocused;
   static bool PlayModeGizmos;
 
   static std::vector<Camera*> cameras;
@@ -37,7 +39,9 @@ public:
   static void end();
 
 
-  static void TogglePlayModeGizmos();
+  static void TogglePlayModePaused(bool _enable = !PlayModePaused);
+  static void TogglePlayModeFocused(bool _enable = !PlayModeFocused);
+  static void TogglePlayModeGizmos(bool _enable = !PlayModeGizmos);
 
 
   static bool IsActiveCamera(); //is the Editor::camera the active render target

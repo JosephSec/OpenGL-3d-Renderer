@@ -11,27 +11,18 @@
 
 Scene SceneManager::scene;
 
-bool SceneManager::playMode = false;
-
 float SceneManager::playerCameraXRotation = 0;
 
 
 void SceneManager::init() {}
 void SceneManager::update() {
-  if(playMode == true) scene.update();
+  scene.update();
 }
 void SceneManager::draw() {
   scene.draw();
 }
 void SceneManager::end() {}
 
-
-void SceneManager::TogglePlayMode(bool _focused) {
-  playMode = !playMode;
-  if(_focused) {
-    Renderer::SetCamera(playMode? scene.camera : Editor::camera);
-  }
-}
 
 void SceneManager::DrawMeshRenderer(const MeshRenderer &_meshRenderer, const Transform &_transform) {
   _meshRenderer.draw(_transform.getMatrix());

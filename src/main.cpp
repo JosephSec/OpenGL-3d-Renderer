@@ -1,39 +1,51 @@
 #include <System.hpp>
 #include <User.hpp>
+
 #include <Engine/Renderer.hpp>
 #include <Engine/Editor.hpp>
+
 #include <Engine/SceneManager.hpp>
 #include <Engine/SceneManager/Scene.hpp>
 #include <Engine/SceneManager/PrimitiveMeshGenerator.hpp>
+
+#include <Engine/Physics.hpp>
 
 #include <SFML/Graphics.hpp>
 #include <random>
 #include <iostream>
 
 
+static std::string BoolString(const std::string &_str, bool _val) {
+  return _str + ": " + std::string(_val? "True" : "False");
+}
+
+
 static void init() {
   System::init();
-  Renderer::init();
+  Renderer::init({800 + 225 * 2, 600}, "Game Engine");
   User::init();
 
   Editor::init(std::filesystem::path(System::PATH));
   SceneManager::init();
+  Physics::init();
 }
-
-
 int main(int argc, char *argv[]) {
   init();
+
+  Editor::camera->transform.position = glm::vec3(5,5,5);
+  Editor::camera->transform.rotation = glm::angleAxis(glm::radians<float>(45), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
+  Renderer::UpdateViewMatrix();
+
+  sf::Font font;
+  if(font.openFromFile(System::PATH+"/assets/Roboto.ttf") == false) {
+    std::cout << "[UI Error]: Font file was not found or could not be opened\n";
+  }
+
 
   if constexpr(false) { //Remake Primitives
     Mesh mesh = MeshGenerator::Pyramid();
     Editor::SaveMeshPrimitive(mesh, "pyramid");
     SceneManager::TestPrimitiveMeshLoading();
-  }
-  if constexpr(true) { //Log Control Keys
-    std::cout <<
-      "F1: Toggle Play Mode" << '\n' <<
-      "F2: Toggle Play Mode (Unfocused)" << '\n' <<
-      "F3: Toggle Debug in Play Mode" << '\n';
   }
 
 
@@ -150,30 +162,16 @@ int main(int argc, char *argv[]) {
         go->meshRenderer.draw(go->transform.getMatrix());
       };
     }
-    { //UV-Sphere
-      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("UV-Sphere"), &Renderer::UnlitShader));
-      gameObject.name = "UV-Sphere";
-
-      gameObject.transform.position = glm::vec3(3,3,-3);
-      // gameObject.transform.scale = glm::vec3(.25f);
-
-      SceneManager::scene.gameObjects.push_back(gameObject);
-      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {};
-      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
-        go->meshRenderer.draw(go->transform.getMatrix());
-      };
-    }
   
     { //Rigidbodys
-      Rigidbody::gravityDirection = glm::vec3(0,-1,0);
-      Rigidbody::gravityStrength = 9.806f;
+      Physics::gravity = glm::vec3(0,-9.806,0);
 
       for(int i = 0; i < 10; i++) {
-        SceneManager::scene.rigidbodys.push_back(Rigidbody(Transform(glm::vec3(-5, 5 + i, -5)), 1, glm::vec3(0,i,0)));
+        SceneManager::scene.rigidbodys.push_back(Rigidbody(Transform(glm::vec3(-5 - i, 5, -5)), 1, glm::vec3(0,i,-i)));
       }
     }
   }
-
+  
 
   while(Renderer::window->isOpen()) {
     while(const auto &eventOpt = Renderer::window->pollEvent()) {
@@ -190,15 +188,69 @@ int main(int argc, char *argv[]) {
       User::Mouse::update();
       Editor::update(System::deltaTime, User::Mouse::delta);
 
-      animationT += System::deltaTime;
-      SceneManager::update();
+      if(Editor::PlayModePaused == false) {
+        animationT += System::deltaTime;
+
+        SceneManager::update();
+        Physics::update();
+      }
     }
 
     { //Render
       Renderer::clear();
 
-      SceneManager::draw();
-      Editor::draw();
+      Renderer::SetState(RenderState::OpenGL); {
+        SceneManager::draw();
+        Editor::draw();
+      }
+
+      Renderer::SetState(RenderState::UI); {
+        const sf::Vector2f size = sf::Vector2f{Renderer::windowSize.x / 6.0f, static_cast<float>(Renderer::windowSize.y)};
+
+        sf::RectangleShape background(size);
+        background.setFillColor(sf::Color(15,15,15));
+
+        sf::Text text(font);
+        const uint32_t charSize = 15;
+        const uint32_t elementPad = 5;
+        const sf::Vector2f listPad = sf::Vector2f{5,15};
+        text.setCharacterSize(charSize);
+
+        { //Left
+          background.setPosition(sf::Vector2f{0,0});
+          Renderer::window->draw(background);
+
+          const std::vector<std::string> elements = {
+            BoolString("F1| Play Mode Paused", Editor::PlayModePaused),
+            BoolString("F2| Play Mode Focused", Editor::PlayModeFocused),
+            BoolString("F3| Play Mode Gizmos", Editor::PlayModeGizmos),
+          };
+
+          for(int i = 0; i < elements.size(); i++) {
+            text.setString(elements[i]);
+            text.setPosition(listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
+            Renderer::window->draw(text);
+          }
+        } //Left
+        { //Right
+          background.setPosition(sf::Vector2f{static_cast<float>(Renderer::windowSize.x - size.x),0});
+          Renderer::window->draw(background);
+
+          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Editor::camera->transform.position * 100.0f)) / 100.0f;
+
+          const std::vector<std::string> elements = {
+            std::format("Editor Cam Pos ({}, {}, {})", camPos.x,camPos.y,camPos.z),
+          };
+
+          const sf::Vector2f start = background.getPosition();
+
+          for(int i = 0; i < elements.size(); i++) {
+            text.setString(elements[i]);
+            text.setPosition(start + listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
+            Renderer::window->draw(text);
+          }
+        } //Right
+      }
 
       Renderer::display();
     }
@@ -206,7 +258,7 @@ int main(int argc, char *argv[]) {
 
   Renderer::end();
   Editor::end();
-  // SceneManager::end();
+  SceneManager::end();
 
   return 0;
 }
