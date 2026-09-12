@@ -1,6 +1,4 @@
 #include <Engine/Editor.hpp>
-#include <System.hpp>
-#include <User.hpp>
 #include <Engine/Renderer.hpp>
 
 #include <Engine/SceneManager.hpp>
@@ -8,6 +6,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 
 std::filesystem::path Editor::PATH;
@@ -21,6 +20,10 @@ bool Editor::PlayModePaused = true;
 bool Editor::PlayModeFocused = true;
 bool Editor::PlayModeGizmos = false;
 
+Mesh Editor::cameraMesh;
+MeshRenderer Editor::cameraMeshRenderer;
+float Editor::CameraTransparencyMin = 1;
+float Editor::CameraTransparencyMax = 5;
 std::vector<Camera*> Editor::cameras;
 
 Camera *Editor::camera;
@@ -34,7 +37,7 @@ MeshRenderer Editor::worldGridRenderer;
 
 void Editor::init(const std::filesystem::path &_PATH) {
   PATH = _PATH;
-  primitiveMeshFolder = PATH/"assets"/"meshes";
+  primitiveMeshFolder = PATH/"assets/meshes/primitives";
 
   for(const auto& entry : std::filesystem::directory_iterator(primitiveMeshFolder)) {
     if(std::filesystem::is_regular_file(entry.status()) == false) continue;
@@ -44,13 +47,10 @@ void Editor::init(const std::filesystem::path &_PATH) {
   camera = new Camera();
   camera->farPlane = 500;
   camera->fov = 90;
+  cameras.push_back(camera);
 
   Renderer::camera = camera;
-  cameras.push_back(Renderer::camera);
-
   Renderer::HandleResize();
-  Renderer::UpdateProjectionMatrix();
-  Renderer::UpdateViewMatrix();
 
 
   worldGridMesh = MeshGenerator::Grid(glm::ivec2(30,30), 1);
@@ -116,10 +116,6 @@ void Editor::draw() {
   Renderer::ClearDepthBuffer();
   worldGridRenderer.draw(glm::mat4x4(1));
 
-  Mesh cubeMesh;
-  LoadMeshPrimitive(cubeMesh, "cube");
-  MeshRenderer cubeRenderer(&cubeMesh, &Renderer::UnlitShader);
-
   Mesh lineMesh(MeshType::Lines); {
     lineMesh.vertices = {
       Mesh::Vertex{{0,0,0}, {1,0,0, 1}},
@@ -130,10 +126,27 @@ void Editor::draw() {
   MeshRenderer lineRenderer(&lineMesh, &Renderer::UnlitShader);
 
 
-  for(const Camera *_camera : cameras) {
+  std::vector<Camera*> sorted_cameras = cameras;
+  std::sort(sorted_cameras.begin(), sorted_cameras.end(), [](const Camera *_a, const Camera *_b) {
+    const float aDistToEditorCam = glm::length(_a->transform.position - camera->transform.position);
+    const float bDistToEditorCam = glm::length(_b->transform.position - camera->transform.position);
+    return aDistToEditorCam > bDistToEditorCam;
+  });
+
+
+  for(const Camera *_camera : sorted_cameras) {
     if(_camera == Renderer::camera) continue;
 
-    cubeRenderer.draw(Transform(_camera->transform.position, _camera->transform.rotation, glm::vec3(.25f)).getMatrix());
+    const float distToEditorCam = glm::length(_camera->transform.position - camera->transform.position);
+    if(distToEditorCam <= CameraTransparencyMin) continue;
+
+    const float alpha = std::min<float>(1, ((distToEditorCam) / (CameraTransparencyMax)));
+    for(Mesh::Vertex &_vertex : cameraMeshRenderer.mesh->vertices) _vertex.color.a = alpha;
+    for(Mesh::Vertex &_vertex : lineRenderer.mesh->vertices) _vertex.color.a = alpha;
+
+    cameraMeshRenderer.update();
+    cameraMeshRenderer.draw(Transform(_camera->transform.position, _camera->transform.rotation, glm::vec3(.25f)).getMatrix());
+    lineRenderer.update();
     lineRenderer.draw(_camera->transform.getMatrix());
   }
 

@@ -30,7 +30,7 @@
 
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
-
+        
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
@@ -49,7 +49,7 @@
 
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
-
+        
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         

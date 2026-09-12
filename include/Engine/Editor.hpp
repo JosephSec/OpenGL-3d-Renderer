@@ -22,6 +22,10 @@ public:
   static bool PlayModeFocused;
   static bool PlayModeGizmos;
 
+  static Mesh cameraMesh;
+  static MeshRenderer cameraMeshRenderer;
+  static float CameraTransparencyMin;
+  static float CameraTransparencyMax;
   static std::vector<Camera*> cameras;
 
   static Camera *camera;

@@ -11,7 +11,13 @@ class ZENGINE_API MeshRenderer {
 public:
   MeshRenderer() {}
   MeshRenderer(Mesh *_mesh, Shader *_shader);
+  MeshRenderer(const MeshRenderer &_meshRenderer);
+  ~MeshRenderer();
 
+  MeshRenderer &operator=(const MeshRenderer &_meshRenderer);
+
+
+  void update();
   void draw(const glm::mat4x4 &_matrix) const;
   //Attemp gpu instancing
 

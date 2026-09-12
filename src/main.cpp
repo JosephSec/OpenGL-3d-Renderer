@@ -11,8 +11,28 @@
 #include <Engine/Physics.hpp>
 
 #include <SFML/Graphics.hpp>
-#include <random>
+
+#include <fstream>
 #include <iostream>
+
+
+static std::vector<std::string> split_string(const std::string &_str, char _ch) {
+  std::vector<std::string> tokens;
+
+  std::string buffer;
+  for(const char &ch : _str) {
+    if(ch == _ch && buffer.empty() == false) {
+      tokens.push_back(buffer);
+      buffer.clear();
+    }
+
+    buffer.push_back(ch);
+  }
+
+  if(buffer.empty() == false) tokens.push_back(buffer);
+
+  return tokens;
+}
 
 
 static std::string BoolString(const std::string &_str, bool _val) {
@@ -41,6 +61,46 @@ int main(int argc, char *argv[]) {
     std::cout << "[UI Error]: Font file was not found or could not be opened\n";
   }
 
+
+  { //Load Camera Mesh
+    std::ifstream file(Editor::PATH/"assets/meshes/camera.obj");
+
+    std::string meshName;
+
+    std::string str;
+    while(std::getline(file, str)) {
+      const uint32_t strSize = str.size();
+
+      for(int i = 0; i < strSize; i++) {
+        char &ch = str[i];
+        if(ch != ' ') continue;
+
+        const std::string prefix = str.substr(0,i);
+        if(prefix == "o") meshName = str.substr(i + 1);
+        else if(prefix == "v") {
+          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+
+          Editor::cameraMesh.vertices.push_back({
+            {std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])},
+            {.9,.9,.9,1}
+          });
+        }
+        else if(prefix == "f") {
+          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+
+          for(const std::string &_part : parts) {
+            Editor::cameraMesh.indices.push_back(std::stoi(_part) - 1);
+          }
+        }
+
+        break;
+      }
+    }
+    
+    file.close();
+
+    Editor::cameraMeshRenderer = MeshRenderer(&Editor::cameraMesh, &Renderer::UnlitShader);
+  }
 
   if constexpr(false) { //Remake Primitives
     Mesh mesh = MeshGenerator::Pyramid();
