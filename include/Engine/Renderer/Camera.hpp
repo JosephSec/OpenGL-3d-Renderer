@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Engine/EngineAPI.hpp>
+#include <Engine/API.hpp>
 
-#include <Engine/SceneManager/Transform.hpp>
+#include <Engine/Transform.hpp>
 
 
 class ZENGINE_API Camera {

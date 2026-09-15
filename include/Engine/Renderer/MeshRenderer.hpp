@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Engine/EngineAPI.hpp>
+#include <Engine/API.hpp>
 
 #include <GL/glew.h>
 #include <Engine/Renderer/Mesh.hpp>

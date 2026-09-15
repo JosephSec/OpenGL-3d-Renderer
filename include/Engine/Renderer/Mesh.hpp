@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Engine/EngineAPI.hpp>
+#include <Engine/API.hpp>
 
 #include <cstdint>
 #include <glm/vec2.hpp>
@@ -22,6 +22,7 @@ public:
   public:
     glm::vec3 position = {0,0,0};
     glm::vec4 color = {1,1,1,1};
+    glm::vec3 normal = {0,0,0};
     glm::vec2 uv = {0,0};
   };
   static constexpr uint16_t VERTEX_SIZE = sizeof(Vertex);

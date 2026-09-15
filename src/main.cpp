@@ -2,13 +2,8 @@
 #include <User.hpp>
 
 #include <Engine/Renderer.hpp>
-#include <Engine/Editor.hpp>
-
-#include <Engine/SceneManager.hpp>
-#include <Engine/SceneManager/Scene.hpp>
-#include <Engine/SceneManager/PrimitiveMeshGenerator.hpp>
-
-#include <Engine/Physics.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Renderer/MeshRenderer.hpp>
 
 #include <SFML/Graphics.hpp>
 
@@ -24,6 +19,7 @@ static std::vector<std::string> split_string(const std::string &_str, char _ch) 
     if(ch == _ch && buffer.empty() == false) {
       tokens.push_back(buffer);
       buffer.clear();
+      continue;
     }
 
     buffer.push_back(ch);
@@ -33,8 +29,6 @@ static std::vector<std::string> split_string(const std::string &_str, char _ch) 
 
   return tokens;
 }
-
-
 static std::string BoolString(const std::string &_str, bool _val) {
   return _str + ": " + std::string(_val? "True" : "False");
 }
@@ -44,17 +38,9 @@ static void init() {
   System::init();
   Renderer::init({800 + 225 * 2, 600}, "Game Engine");
   User::init();
-
-  Editor::init(std::filesystem::path(System::PATH));
-  SceneManager::init();
-  Physics::init();
 }
 int main(int argc, char *argv[]) {
   init();
-
-  Editor::camera->transform.position = glm::vec3(5,5,5);
-  Editor::camera->transform.rotation = glm::angleAxis(glm::radians<float>(45), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
-  Renderer::UpdateViewMatrix();
 
   sf::Font font;
   if(font.openFromFile(System::PATH+"/assets/Roboto.ttf") == false) {
@@ -62,10 +48,28 @@ int main(int argc, char *argv[]) {
   }
 
 
-  { //Load Camera Mesh
-    std::ifstream file(Editor::PATH/"assets/meshes/camera.obj");
+  Camera *camera = new Camera();
+  camera->fov = 90;
+  camera->transform.position = glm::vec3(3,3,-3);
+  camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-45), glm::vec3(1,0,0));
+  Renderer::SetCamera(camera);
 
-    std::string meshName;
+  Renderer::ambientLight = {0,1,0,.1};
+  Renderer::lights.push_back(Light{
+    camera->transform.position,
+    {1,0,0,1},
+    20
+  });
+  Renderer::UpdateDynamicLighting();
+
+  Mesh mesh;
+  MeshRenderer meshRenderer = MeshRenderer(nullptr, Renderer::GetShader("Lit"));
+
+  if constexpr(true) { //Load Camera Mesh
+    std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
+
+    std::vector<glm::vec3> temp_positions;
+    std::vector<glm::vec3> temp_normals;
 
     std::string str;
     while(std::getline(file, str)) {
@@ -76,160 +80,36 @@ int main(int argc, char *argv[]) {
         if(ch != ' ') continue;
 
         const std::string prefix = str.substr(0,i);
-        if(prefix == "o") meshName = str.substr(i + 1);
-        else if(prefix == "v") {
+        if(prefix == "v") {
           const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
-
-          Editor::cameraMesh.vertices.push_back({
-            {std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])},
-            {.9,.9,.9,1}
-          });
+          temp_positions.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
+        }
+        else if(prefix == "vn") {
+          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+          temp_normals.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
         }
         else if(prefix == "f") {
           const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
 
-          for(const std::string &_part : parts) {
-            Editor::cameraMesh.indices.push_back(std::stoi(_part) - 1);
+          for(const std::string &part : parts) {
+            const std::vector<std::string> subParts = split_string(part, '/');
+
+            int vIndex = std::stoi(subParts[0]) - 1;
+            int uIndex = std::stoi(subParts[1]) - 1;
+            int nIndex = std::stoi(subParts[2]) - 1;
+
+            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, temp_normals[nIndex]});
+            mesh.indices.push_back(mesh.vertices.size() - 1);
           }
         }
 
         break;
       }
     }
-    
+
     file.close();
 
-    Editor::cameraMeshRenderer = MeshRenderer(&Editor::cameraMesh, &Renderer::UnlitShader);
-  }
-
-  if constexpr(false) { //Remake Primitives
-    Mesh mesh = MeshGenerator::Pyramid();
-    Editor::SaveMeshPrimitive(mesh, "pyramid");
-    SceneManager::TestPrimitiveMeshLoading();
-  }
-
-
-  static float itemDropDist = 3;
-  static float animationT = 0;
-  { //Init Scene
-    { //Load Meshes
-      Mesh mesh;
-      Editor::LoadMeshPrimitive(mesh, "cube");
-      SceneManager::scene.LoadMeshToScene("Cube", mesh);
-
-      Editor::LoadMeshPrimitive(mesh, "quad");
-      Editor::RandomizeMeshColors(mesh, {{0,0,0, 1}});
-      SceneManager::scene.LoadMeshToScene("Ground", mesh);
-
-      Editor::LoadMeshPrimitive(mesh, "cylinder");
-      Editor::RandomizeMeshColors(mesh, {{1,0,0, 1}});
-      SceneManager::scene.LoadMeshToScene("Player", mesh);
-
-      mesh = MeshGenerator::UVSphere();
-      SceneManager::scene.LoadMeshToScene("UV-Sphere", mesh);
-    }
-
-    { //Item Drop
-      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Cube"), &Renderer::UnlitShader));
-      gameObject.name = "Item Drop";
-
-      gameObject.transform.position = glm::vec3(0,1.5, -5);
-
-      SceneManager::scene.gameObjects.push_back(gameObject);
-      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
-        go->transform.position = glm::vec3(0,1.5 + glm::sin(animationT), -5);
-        go->transform.rotation = glm::angleAxis(animationT, glm::vec3(0,1,0));
-      };
-      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
-        go->meshRenderer.draw(go->transform.getMatrix());
-      };
-      SceneManager::scene.gameObjects.back().m_drawGizmos = [](const GameObject* go) {
-        Mesh mesh = MeshGenerator::WireSphere(24, itemDropDist);
-        MeshRenderer(&mesh, &Renderer::UnlitShader).draw(go->transform.getMatrix());
-      };
-    }
-    { //Ground
-      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Ground"), &Renderer::UnlitShader));
-      gameObject.name = "Ground";
-
-      gameObject.transform.rotation = glm::angleAxis(glm::radians<float>(-90), glm::vec3(1,0,0));
-      gameObject.transform.scale = glm::vec3(30,30,1);
-
-      SceneManager::scene.gameObjects.push_back(gameObject);
-      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {};
-      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
-        go->meshRenderer.draw(go->transform.getMatrix());
-      };
-    }
-    { //Player
-      SceneManager::scene.camera = new Camera(glm::vec3(0,2,0));
-      SceneManager::scene.camera->nearPlane = .25f;
-      Editor::cameras.push_back(SceneManager::scene.camera);
-
-      GameObject gameObject = GameObject(MeshRenderer(SceneManager::scene.GetMeshFromScene("Player"), &Renderer::UnlitShader));
-      gameObject.name = "Player";
-
-      gameObject.transform.position = glm::vec3(0,1,0);
-      gameObject.transform.scale = glm::vec3(1,2,1);
-
-      SceneManager::scene.gameObjects.push_back(gameObject);
-      SceneManager::scene.gameObjects.back().m_update = [](GameObject* go) {
-        if(Editor::IsActiveCamera()) return; //NEEDS TO BE REMOVED! CREATE GLOBAL RUNTIME VARIABLES FOR PLAYMODE
-
-        { //Body Movement
-          glm::vec3 moveDir = glm::vec3(0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-          if(glm::length(moveDir) != 0) {
-            const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? 5 : 2);
-            go->transform.position += (go->transform.rotation * glm::normalize(moveDir)) * speed;
-            SceneManager::scene.camera->transform.position = go->transform.position + glm::vec3(0,1,0);
-
-            Renderer::UpdateViewMatrix();
-          }
-        }
-
-        { //Camera Movement
-          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-            const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * Editor::sensitivity * System::deltaTime;
-            SceneManager::playerCameraXRotation = glm::clamp(SceneManager::playerCameraXRotation + lookDelta.y, glm::radians<float>(-90), glm::radians<float>(90));
-
-            const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-            const glm::quat pitch = glm::angleAxis(SceneManager::playerCameraXRotation, glm::vec3(1,0,0));
-
-            go->transform.rotation = glm::normalize(go->transform.rotation * yaw);
-            SceneManager::scene.camera->transform.rotation = glm::normalize(go->transform.rotation * pitch);
-
-            Renderer::UpdateViewMatrix();
-          }
-        }
-      
-        { //Item Drop Interaction
-          for(GameObject &gameObject : SceneManager::scene.gameObjects) {
-            if(gameObject.name != "Item Drop" || gameObject.isActive == false) continue;
-
-            if(glm::length(gameObject.transform.position - go->transform.position) <= itemDropDist) {
-              gameObject.isActive = false;
-            }
-
-            break;
-          }
-        }
-      };
-      SceneManager::scene.gameObjects.back().m_draw = [](const GameObject* go) {
-        go->meshRenderer.draw(go->transform.getMatrix());
-      };
-    }
-  
-    { //Rigidbodys
-      Physics::gravity = glm::vec3(0,-9.806,0);
-
-      for(int i = 0; i < 10; i++) {
-        SceneManager::scene.rigidbodys.push_back(Rigidbody(Transform(glm::vec3(-5 - i, 5, -5)), 1, glm::vec3(0,i,-i)));
-      }
-    }
+    meshRenderer.setMesh(&mesh);
   }
   
 
@@ -239,30 +119,20 @@ int main(int argc, char *argv[]) {
 
       if(event.is<sf::Event::Closed>()) Renderer::window->close();
       else if(event.is<sf::Event::KeyPressed>()) User::HandleEvent(event);
-      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::HandleResize();
+      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::UpdateWindowSize();
     }
 
 
     { //Update
       System::update();
       User::Mouse::update();
-      Editor::update(System::deltaTime, User::Mouse::delta);
-
-      if(Editor::PlayModePaused == false) {
-        animationT += System::deltaTime;
-
-        SceneManager::update();
-        Physics::update();
-      }
     }
 
     { //Render
       Renderer::clear();
 
-      Renderer::SetState(RenderState::OpenGL); {
-        SceneManager::draw();
-        Editor::draw();
-      }
+      Renderer::SetState(RenderState::OpenGL);
+      meshRenderer.draw(Transform().getMatrix());
 
       Renderer::SetState(RenderState::UI); {
         const sf::Vector2f size = sf::Vector2f{Renderer::windowSize.x / 6.0f, static_cast<float>(Renderer::windowSize.y)};
@@ -281,9 +151,7 @@ int main(int argc, char *argv[]) {
           Renderer::window->draw(background);
 
           const std::vector<std::string> elements = {
-            BoolString("F1| Play Mode Paused", Editor::PlayModePaused),
-            BoolString("F2| Play Mode Focused", Editor::PlayModeFocused),
-            BoolString("F3| Play Mode Gizmos", Editor::PlayModeGizmos),
+            BoolString("F1| Wireframe Mode", Renderer::WireframeMode),
           };
 
           for(int i = 0; i < elements.size(); i++) {
@@ -296,7 +164,7 @@ int main(int argc, char *argv[]) {
           background.setPosition(sf::Vector2f{static_cast<float>(Renderer::windowSize.x - size.x),0});
           Renderer::window->draw(background);
 
-          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Editor::camera->transform.position * 100.0f)) / 100.0f;
+          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Renderer::camera->transform.position * 100.0f)) / 100.0f;
 
           const std::vector<std::string> elements = {
             std::format("Editor Cam Pos ({}, {}, {})", camPos.x,camPos.y,camPos.z),
@@ -317,8 +185,6 @@ int main(int argc, char *argv[]) {
   }
 
   Renderer::end();
-  Editor::end();
-  SceneManager::end();
 
   return 0;
 }
