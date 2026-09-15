@@ -50,13 +50,13 @@ int main(int argc, char *argv[]) {
 
   Camera *camera = new Camera();
   camera->fov = 90;
-  camera->transform.position = glm::vec3(3,3,-3);
-  camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-45), glm::vec3(1,0,0));
+  camera->transform.position = glm::vec3(2,1,-2);
+  camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-15), glm::vec3(1,0,0));
   Renderer::SetCamera(camera);
 
-  Renderer::ambientLight = {0,1,0,.1};
+  Renderer::ambientLight = {1,1,1,1};
   Renderer::lights.push_back(Light{
-    camera->transform.position,
+    {1,1,-1},
     {1,0,0,1},
     20
   });
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   Mesh mesh;
   MeshRenderer meshRenderer = MeshRenderer(nullptr, Renderer::GetShader("Lit"));
 
-  if constexpr(true) { //Load Camera Mesh
+  if constexpr(false) { //Load Camera Mesh
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
 
     std::vector<glm::vec3> temp_positions;
@@ -111,7 +111,17 @@ int main(int argc, char *argv[]) {
 
     meshRenderer.setMesh(&mesh);
   }
-  
+  if constexpr(true) { //Load Triangle Mesh
+    mesh.vertices = {
+      Mesh::Vertex{{ 1,-1,0}, {1,1,1,1}, {0,0,1}},
+      Mesh::Vertex{{ 0, 1,0}, {1,1,1,1}, {0,0,1}},
+      Mesh::Vertex{{-1,-1,0}, {1,1,1,1}, {0,0,1}},
+    };
+    mesh.indices = {0,1,2};
+
+    meshRenderer.setMesh(&mesh);
+  }
+
 
   while(Renderer::window->isOpen()) {
     while(const auto &eventOpt = Renderer::window->pollEvent()) {
@@ -131,8 +141,27 @@ int main(int argc, char *argv[]) {
     { //Render
       Renderer::clear();
 
-      Renderer::SetState(RenderState::OpenGL);
-      meshRenderer.draw(Transform().getMatrix());
+      Renderer::SetState(RenderState::OpenGL); {
+        meshRenderer.draw(Transform().getMatrix());
+        { //Normals
+          Mesh normalMesh(MeshType::Lines);
+          
+          glm::vec3 normal = mesh.vertices[mesh.indices[0]].normal;
+          glm::vec3 center = (mesh.vertices[mesh.indices[0]].position +
+                              mesh.vertices[mesh.indices[1]].position +
+                              mesh.vertices[mesh.indices[2]].position) / 3.0f;
+
+          normalMesh.vertices.push_back(Mesh::Vertex{center, {0,0,1,1}});
+          normalMesh.vertices.push_back(Mesh::Vertex{center + normal, {0,0,1,1}});
+
+          normalMesh.indices.push_back(0);
+          normalMesh.indices.push_back(1);
+
+          MeshRenderer normalRenderer(&normalMesh, Renderer::GetShader("Unlit"));
+          normalRenderer.draw(Transform().getMatrix());
+        } //Normals
+      }
+
 
       Renderer::SetState(RenderState::UI); {
         const sf::Vector2f size = sf::Vector2f{Renderer::windowSize.x / 6.0f, static_cast<float>(Renderer::windowSize.y)};
