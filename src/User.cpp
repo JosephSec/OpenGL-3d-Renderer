@@ -19,6 +19,14 @@ void User::Mouse::init() {
 void User::Mouse::update() {
   const sf::Vector2i curMousePos = sf::Mouse::getPosition(*Renderer::window);
   delta = glm::ivec2(curMousePos.x, curMousePos.y) - position;
+  position += delta;
+}
+void User::Mouse::update(const glm::ivec2 &_lockedPosition) {
+  const sf::Vector2i curMousePos = sf::Mouse::getPosition(*Renderer::window);
+  delta = glm::ivec2(curMousePos.x, curMousePos.y) - position;
+  position = _lockedPosition;
+  
+  sf::Mouse::setPosition(sf::Vector2i{position.x,position.y}, *Renderer::window);
 }
 
 

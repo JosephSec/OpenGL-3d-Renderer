@@ -14,6 +14,7 @@ public:
 
     static void init();
     static void update();
+    static void update(const glm::ivec2 &_lockedPosition);
   };
 
 

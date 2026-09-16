@@ -48,3 +48,13 @@ GLuint Shader::CompileShader(GLenum type, const char *_src) {
 
   return program;
 }
+
+GLint Shader::tryGetUniformLocation(GLuint _program, const std::string &_name) {
+  GLint location = glGetUniformLocation(_program, _name.c_str());
+  
+  if(location == -1) {
+    std::cout << "[SHADER ERROR]: Attempted to find shader uniform that does not exists (" << _name << ")\n";
+  }
+
+  return location;
+}

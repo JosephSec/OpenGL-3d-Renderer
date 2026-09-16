@@ -102,23 +102,20 @@ void Renderer::UpdateWindowSize() {
 void Renderer::UpdateDynamicLighting() {
   const int lightCount = lights.size();
 
-  if(lightCount == 0) {
-    std::cout << "[Renderer Error]: Attempted to update dynamic lighting with no light instances\n";
-    return;
-  }
-
-
   Shader &LitShader = s_shaders["Lit"];
   glUseProgram(LitShader);
   LitShader.SetUniform("ambientLight", ambientLight);
   LitShader.SetUniform("lightCount", lightCount);
 
-  for(int i = 0; i < lightCount; i++) {
-    const std::string prefix = "lights[" + std::to_string(i) + "].";
-    LitShader.SetUniform(prefix+"position", lights[i].position);
-    LitShader.SetUniform(prefix+"color", lights[i].color);
-    LitShader.SetUniform(prefix+"radius", lights[i].radius);
+  if(lightCount != 0) {
+    for(int i = 0; i < lightCount; i++) {
+      const std::string prefix = "lights[" + std::to_string(i) + "].";
+      LitShader.SetUniform(prefix+"position", lights[i].position);
+      LitShader.SetUniform(prefix+"color", lights[i].color);
+      LitShader.SetUniform(prefix+"radius", lights[i].radius);
+    }
   }
+
   glUseProgram(0);
 }
 
