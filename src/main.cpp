@@ -1,14 +1,16 @@
 #include <System.hpp>
 #include <User.hpp>
 
-#include <Engine/Renderer.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Renderer/MeshRenderer.hpp>
-
 #include <SFML/Graphics.hpp>
 
 #include <fstream>
 #include <iostream>
+
+#include <Engine/Renderer.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Renderer/MeshRenderer.hpp>
+#include <Engine/Renderer/MeshHelper.hpp>
+using namespace Renderer;
 
 
 static std::vector<std::string> split_string(const std::string &_str, char _ch) {
@@ -36,10 +38,10 @@ static std::string BoolString(const std::string &_str, bool _val) {
 
 static void init() {
   System::init();
-  Renderer::init({800 + 225 * 2, 600}, "Game Engine");
+  Core::init({800 + 225 * 2, 600}, "Game Engine");
   User::init();
 
-  Renderer::window->setVerticalSyncEnabled(true);
+  Core::window->setVerticalSyncEnabled(true);
 }
 int main(int argc, char *argv[]) {
   init();
@@ -54,27 +56,27 @@ int main(int argc, char *argv[]) {
   camera->fov = 90;
   camera->transform.position = glm::vec3(3,3,-3);
   camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-45), glm::vec3(1,0,0));
-  Renderer::SetCamera(camera);
+  Core::SetCamera(camera);
 
-  Renderer::ambientLight = {0,0,1,.1};
-  Renderer::lights.push_back(Light{
+  Core::ambientLight = {0,0,1,.1};
+  Core::lights.push_back(Light{
     {0,1,0},
     {1,0,0},
     5.0f,
     1.0f
   });
-  Renderer::lights.push_back(Light{
+  Core::lights.push_back(Light{
     {0,1,0},
     {0,1,0},
     5.0f,
     1.0f
   });
-  Renderer::UpdateDynamicLighting();
+  Core::UpdateDynamicLighting();
 
   Mesh mesh;
-  MeshRenderer meshRenderer = MeshRenderer(nullptr, Renderer::GetShader("Lit"));
+  MeshRenderer meshRenderer = MeshRenderer(nullptr, Core::GetShader("Lit"));
 
-  if constexpr(false) { //Load Camera
+  if constexpr(true) { //Load Camera
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
 
     std::vector<glm::vec3> temp_positions;
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
             int uIndex = std::stoi(subParts[1]) - 1;
             int nIndex = std::stoi(subParts[2]) - 1;
 
-            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, temp_normals[nIndex]});
+            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
             mesh.indices.push_back(mesh.vertices.size() - 1);
           }
         }
@@ -117,70 +119,33 @@ int main(int argc, char *argv[]) {
     }
 
     file.close();
-
-    meshRenderer.setMesh(&mesh);
   }
-  if constexpr(false) { //Load Triangle
-    mesh.vertices = {
-      Mesh::Vertex{{ 1,-1,0}, {1,0,0,1}, {0,0,-1}},
-      Mesh::Vertex{{ 0, 1,0}, {0,1,0,1}, {0,0,-1}},
-      Mesh::Vertex{{-1,-1,0}, {0,0,1,1}, {0,0,-1}},
-    };
-    mesh.indices = {0,1,2};
-
-    meshRenderer.setMesh(&mesh);
-  }
-  if constexpr(true) { //Load Plane
-    const glm::vec2 size = glm::vec2(30,30);
-    const glm::ivec2 grid = glm::ivec2(10,10);
-    const glm::vec2 scalar = glm::vec2(size.x / grid.x, size.y / grid.y);
-
-    for(int z = 0; z <= grid.y; z++) {
-      for(int x = 0; x <= grid.x; x++) {
-        mesh.vertices.push_back(Mesh::Vertex{
-          {(x * scalar.x) - size.x / 2.0f, 0, (-z * scalar.y) + size.y / 2.0f},
-          {1,1,1,1},
-          {0,1,0}
-        });
-      }
-    }
-    for(int z = 0; z < grid.y; z++) {
-      for(int x = 0; x < grid.x; x++) {
-        const unsigned int a = x + z * (grid.x + 1);
-        const unsigned int b = a + grid.x + 1;
-        const unsigned int c = b + 1;
-        const unsigned int d = a + 1;
-
-        mesh.indices.push_back(a);
-        mesh.indices.push_back(b);
-        mesh.indices.push_back(c);
-
-        mesh.indices.push_back(a);
-        mesh.indices.push_back(c);
-        mesh.indices.push_back(d);
-      }
-    }
-
-    meshRenderer.setMesh(&mesh);
-  }
+  if constexpr(false) mesh = MeshHelper::GeneratePlane(glm::vec2(30,30), glm::ivec2(3,3));
+  meshRenderer.setMesh(&mesh);
 
 
-  while(Renderer::window->isOpen()) {
-    while(const auto &eventOpt = Renderer::window->pollEvent()) {
+  while(Core::window->isOpen()) {
+    while(const auto &eventOpt = Core::window->pollEvent()) {
       const auto &event = *eventOpt;
 
-      if(event.is<sf::Event::Closed>()) Renderer::window->close();
+      if(event.is<sf::Event::Closed>()) Core::window->close();
       else if(event.is<sf::Event::KeyPressed>()) User::HandleEvent(event);
-      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::UpdateWindowSize();
+      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Core::UpdateWindowSize();
     }
 
 
     { //Update
-      std::optional<glm::ivec2> mouseLockPosition;
+      static std::optional<glm::ivec2> mouseLockPosition;
 
       System::update();
       if(mouseLockPosition.has_value() == false) User::Mouse::update();
       else User::Mouse::update(mouseLockPosition.value());
+
+      static float animationT = 0;
+      animationT += System::deltaTime;
+      Core::lights[0].position = glm::vec3(glm::cos(animationT) * 5, 1, glm::sin(animationT) * 5);
+      Core::lights[1].position = glm::vec3(0, glm::cos(animationT) * 5, glm::sin(animationT) * 5);
+      Core::UpdateDynamicLighting();
 
       { //Camera Movement
         static constexpr float sensitivity = 1;
@@ -188,7 +153,7 @@ int main(int argc, char *argv[]) {
         static constexpr float fastModeSpeed = 20;
 
         if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-          mouseLockPosition = Renderer::windowSize / 2;
+          mouseLockPosition = Core::windowSize / 2;
 
           glm::vec3 moveDir = glm::vec3(0);
           if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
@@ -210,51 +175,49 @@ int main(int argc, char *argv[]) {
             camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
           }
 
-          Renderer::UpdateViewMatrix();
+          Core::UpdateViewMatrix();
         }
         else if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle)) {
+          mouseLockPosition = Core::windowSize / 2;
+
           if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
             const glm::vec2 lookDelta = glm::vec2(User::Mouse::delta.x, -User::Mouse::delta.y) * sensitivity * System::deltaTime;
             camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
 
-            Renderer::UpdateViewMatrix();
+            Core::UpdateViewMatrix();
           }      
         }
+        else mouseLockPosition = std::nullopt;
       }
     }
 
     { //Render
-      Renderer::clear();
+      Core::clear();
 
-      Renderer::SetState(RenderState::OpenGL); {
+      Core::SetState(Renderer::State::OpenGL); {
         Transform transform;
         meshRenderer.draw(transform.getMatrix());
 
-        Mesh normalMesh(MeshType::Lines);
-
-        for(int i = 0; i < mesh.indices.size() / 3; i++) {
-          const int start = i * 3;
-
-          const glm::vec3 normal = mesh.vertices[mesh.indices[start]].normal;
-          const glm::vec3 center = (
-            mesh.vertices[mesh.indices[start+0]].position +
-            mesh.vertices[mesh.indices[start+1]].position +
-            mesh.vertices[mesh.indices[start+2]].position
-          ) / 3.0f;
-
-          normalMesh.indices.push_back(normalMesh.vertices.size());
-          normalMesh.vertices.push_back(Mesh::Vertex{center, {0,0,1,1}});
-
-          normalMesh.indices.push_back(normalMesh.vertices.size());
-          normalMesh.vertices.push_back(Mesh::Vertex{center + normal, {0,0,1,1}});
+        if(System::ShowMeshNormals) {
+          Mesh normalMesh = MeshHelper::GenerateNormalLines(mesh, {0,0,1,1});
+          MeshRenderer normalRenderer(&normalMesh, Core::GetShader("Unlit"));
+          normalRenderer.draw(transform.getMatrix());
         }
+        if(System::ShowLightGizmos) {
+          Mesh lightMesh = MeshHelper::GenerateUVSphere(8,8,.25f);
+          MeshRenderer lightRenderer(&lightMesh, Core::GetShader("Unlit"));
+          lightRenderer.backFaceCulling = false;
 
-        MeshRenderer normalRenderer(&normalMesh, Renderer::GetShader("Unlit"));
-        normalRenderer.draw(transform.getMatrix());
+          for(const Light &light : Core::lights) {
+            MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
+            lightRenderer.update();
+            lightRenderer.draw(Transform(light.position).getMatrix());
+          }
+        }
       }
 
-      Renderer::SetState(RenderState::UI); {
-        const sf::Vector2f size = sf::Vector2f{Renderer::windowSize.x / 6.0f, static_cast<float>(Renderer::windowSize.y)};
+      Core::SetState(Renderer::State::UI); {
+        const sf::Vector2f size = sf::Vector2f{Core::windowSize.x / 6.0f, static_cast<float>(Core::windowSize.y)};
 
         sf::RectangleShape background(size);
         background.setFillColor(sf::Color(15,15,15));
@@ -267,23 +230,25 @@ int main(int argc, char *argv[]) {
 
         { //Left
           background.setPosition(sf::Vector2f{0,0});
-          Renderer::window->draw(background);
+          Core::window->draw(background);
 
           const std::vector<std::string> elements = {
-            BoolString("F1| Wireframe Mode", Renderer::WireframeMode),
+            BoolString("F1| Wireframe Mode", Core::WireframeMode),
+            BoolString("F2| Show Normals", System::ShowMeshNormals),
+            BoolString("F3| Light Gizmos", System::ShowLightGizmos),
           };
 
           for(int i = 0; i < elements.size(); i++) {
             text.setString(elements[i]);
             text.setPosition(listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Renderer::window->draw(text);
+            Core::window->draw(text);
           }
         } //Left
         { //Right
-          background.setPosition(sf::Vector2f{static_cast<float>(Renderer::windowSize.x - size.x),0});
-          Renderer::window->draw(background);
+          background.setPosition(sf::Vector2f{static_cast<float>(Core::windowSize.x - size.x),0});
+          Core::window->draw(background);
 
-          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Renderer::camera->transform.position * 100.0f)) / 100.0f;
+          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Core::camera->transform.position * 100.0f)) / 100.0f;
 
           const std::vector<std::string> elements = {
             std::format("Editor Cam Pos ({}, {}, {})", camPos.x,camPos.y,camPos.z),
@@ -294,16 +259,16 @@ int main(int argc, char *argv[]) {
           for(int i = 0; i < elements.size(); i++) {
             text.setString(elements[i]);
             text.setPosition(start + listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Renderer::window->draw(text);
+            Core::window->draw(text);
           }
         } //Right
       }
 
-      Renderer::display();
+      Core::display();
     }
   }
 
-  Renderer::end();
+  Core::end();
 
   return 0;
 }

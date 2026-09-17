@@ -1,8 +1,8 @@
 #include <Engine/Renderer/Shader.hpp>
+using namespace Renderer;
 
 #include <fstream>
 #include <sstream>
-
 #include <iostream>
 
 
@@ -43,7 +43,8 @@ GLuint Shader::CompileShader(GLenum type, const char *_src) {
   if(!success) {
     char log[512];
     glGetShaderInfoLog(program, 512, nullptr, log);
-    std::cerr << "[SHADER ERROR]:\n" << log << "\n\n" << _src;
+    std::cerr << "[SHADER ERROR]: ";
+    throw std::runtime_error("Failed to compile shader.\nLog: " + std::string(log));
   }
 
   return program;

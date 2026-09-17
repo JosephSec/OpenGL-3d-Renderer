@@ -20,30 +20,16 @@ uniform Light lights[MAX_LIGHTS];
 
 void main() {
   vec3 normal = normalize(vNormal);
-  vec3 totalLight = vec3(0);
+  vec3 totalLight = ambientLight.rgb * ambientLight.a;
 
-  if(false) {
-    for(int i = 0; i < lightCount; i++) {
-      vec3 lightDir = lights[i].position - vPos;
-      float dist = length(lightDir);
-      float strength = (1.0 - min(dist, lights[i].radius) / lights[i].radius);
+  for(int i = 0; i < lightCount; i++) {
+    vec3 lightDir = lights[i].position - vPos;
+    float dist = length(lightDir);
+    float strength = 1 - min(dist, lights[i].radius) / lights[i].radius;
 
-      if(dist > 1e-4) lightDir /= dist;
-      else lightDir = vec3(0,1,0);
-
-      float diffuse = max(dot(normal, lightDir), 0.0);
-      totalLight += diffuse * strength * lights[i].color;
-    }
-
-    vec3 finalLightVal = totalLight + ambientLight.rgb;
-    FragColor = vec4(clamp(vColor.rgb * finalLightVal, 0.0,1.0), vColor.a);
+    float diffuse = max(dot(normal, lightDir), 0);
+    totalLight += lights[i].color * diffuse * strength;
   }
   
-  
-  vec3 lightDir = lights[0].position - vPos;
-  float dist = length(lightDir);
-  float strength = 1 - min(dist, lights[0].radius) / lights[0].radius;
-
-  float diffuse = max(dot(normal, lightDir), 0);
-  FragColor = vec4(clamp(vColor.rgb * (diffuse * strength * lights[0].color), 0,1), vColor.a);
+  FragColor = vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
 }

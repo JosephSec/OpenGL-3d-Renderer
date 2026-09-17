@@ -1,6 +1,5 @@
 #include <Engine/Renderer/MeshRenderer.hpp>
-
-#include <Engine/Renderer.hpp>
+using namespace Renderer;
 
 #include <iostream>
 
