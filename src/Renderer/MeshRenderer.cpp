@@ -76,15 +76,16 @@ void MeshRenderer::update() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * Mesh::VERTEX_SIZE, mesh->vertices.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * Mesh::VERTEX_SIZE, mesh->vertices.data(), GL_STATIC_DRAW);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size() * sizeof(unsigned int), mesh->indices.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size() * sizeof(unsigned int), mesh->indices.data(), GL_STATIC_DRAW);
 
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+
 void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   if(mesh == nullptr) return;
 
@@ -92,7 +93,8 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
 
   if(shader != nullptr) {
     glUseProgram(shader->program);
-    shader->SetUniform("model", _matrix);
+    shader->SetUniform("uModel", _matrix);
+    shader->SetUniform("uIsInstanced", false);
     
   } else glUseProgram(0);
 
@@ -109,6 +111,50 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   }
 
   glDrawElements(drawType, mesh->indices.size(), GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
+  glUseProgram(0);
+}
+inline void MeshRenderer::draw(const Transform &_transform) const {
+  draw(_transform.getMatrix());
+}
+void MeshRenderer::draw(const std::vector<glm::mat4x4> &_matrices) const {
+  if(mesh == nullptr) return;
+
+  backFaceCulling? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+
+  if(shader != nullptr) {
+    glUseProgram(shader->program);
+    shader->SetUniform("uIsInstanced", true);
+    
+  } else glUseProgram(0);
+
+  glBindVertexArray(vao);
+
+  GLuint instanceVBO; {  
+    glGenBuffers(1, &instanceVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, _matrices.size() * sizeof(glm::mat4), _matrices.data(), GL_DYNAMIC_DRAW);
+
+    std::size_t vec4Size = sizeof(glm::vec4);
+    for(unsigned int i = 0; i < 4; i++) {
+      unsigned int attribLocation = 4 + i;
+      glEnableVertexAttribArray(attribLocation);
+      glVertexAttribPointer(attribLocation, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(i * vec4Size));
+      glVertexAttribDivisor(attribLocation, 1); 
+    }
+  }
+
+  int drawType = GL_TRIANGLES;
+  switch(mesh->type) {
+    case MeshType::LitTriangle:
+      drawType = GL_TRIANGLES;
+      break;
+    case MeshType::Lines:
+      drawType = GL_LINES;
+      break;
+  }
+
+  glDrawElementsInstanced(drawType, mesh->indices.size(), GL_UNSIGNED_INT, 0, _matrices.size());
   glBindVertexArray(0);
   glUseProgram(0);
 }
@@ -150,10 +196,10 @@ void MeshRenderer::setMesh(Mesh *_mesh) {
   glEnableVertexAttribArray(3);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * Mesh::VERTEX_SIZE, mesh->vertices.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * Mesh::VERTEX_SIZE, mesh->vertices.data(), GL_STATIC_DRAW);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size() * sizeof(unsigned int), mesh->indices.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size() * sizeof(unsigned int), mesh->indices.data(), GL_STATIC_DRAW);
 
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);

@@ -75,7 +75,7 @@ void Core::UpdateViewMatrix() {
   viewMatrix = camera->getViewMatrix();
   for(const auto &[name, shader] : s_shaders) {
     glUseProgram(shader);
-    shader.SetUniform("view", viewMatrix);
+    shader.SetUniform("uView", viewMatrix);
   }
   glUseProgram(0);
 }
@@ -88,7 +88,7 @@ void Core::UpdateProjectionMatrix() {
   projectionMatrix = camera->getProjectionMatrix(windowSize);
   for(const auto &[name, shader] : s_shaders) {
     glUseProgram(shader);
-    shader.SetUniform("projection", projectionMatrix);
+    shader.SetUniform("uProjection", projectionMatrix);
   }
   glUseProgram(0);
 }

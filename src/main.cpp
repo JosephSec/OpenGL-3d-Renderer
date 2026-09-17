@@ -7,6 +7,8 @@ using namespace Renderer;
 
 #include <fstream>
 #include <iostream>
+#include <random>
+#include <chrono>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
@@ -70,24 +72,38 @@ int main(int argc, char *argv[]) {
 
   Camera *camera = new Camera();
   camera->fov = 90;
-
   camera->transform.position = glm::vec3(2.5,2,-4.5);
   camera->transform.rotation = glm::angleAxis(glm::radians<float>(145), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
   Core::SetCamera(camera);
 
-  Core::ambientLight = {0,0,1,.1};
+  Core::ambientLight = {.1,.1,.1, .1};
   Core::lights = {
-    Light{{0,0,0}, {1,0,0}, 5.0f, 1.0f},
-    Light{{0,0,0}, {0,1,0}, 5.0f, 1.0f},
-    Light{{0,0,0}, {0,0,1}, 5.0f, 1.0f},
-    Light{{0,0,0}, {1,1,0}, 5.0f, 1.0f},
-    Light{{0,0,0}, {1,0,1}, 5.0f, 1.0f},
-    Light{{0,0,0}, {0,1,1}, 5.0f, 1.0f},
+    Light{{0,0,0}, {1,0,0}, 100.0f, 1.0f},
+    Light{{0,0,0}, {0,1,0}, 100.0f, 1.0f},
+    Light{{0,0,0}, {0,0,1}, 100.0f, 1.0f},
+    Light{{0,0,0}, {1,1,0}, 100.0f, 1.0f},
+    Light{{0,0,0}, {1,0,1}, 100.0f, 1.0f},
+    Light{{0,0,0}, {0,1,1}, 100.0f, 1.0f},
   };
   Core::UpdateDynamicLighting();
 
   Mesh mesh;
   MeshRenderer meshRenderer = MeshRenderer(nullptr, Core::GetShader("Lit"));
+
+  std::vector<glm::mat4x4> meshInstances;
+  { //Generate Mesh Instances
+    static constexpr float SPAWN_RADIUS = 100;
+    static constexpr float SCALE_RANGE_MIN = .1f;
+    static constexpr float SCALE_RANGE_MAX = 5;
+
+    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+    std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
+    std::uniform_real_distribution<float> randScale(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
+
+    for(int i = 0; i < 500; i++) {
+      meshInstances.push_back(Transform(glm::vec3(randRadius(gen),randRadius(gen),randRadius(gen)), glm::quat(), glm::vec3(randScale(gen))).getMatrix());
+    }
+  }
 
   if constexpr(true) { //Load Camera
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
@@ -155,18 +171,20 @@ int main(int argc, char *argv[]) {
       else User::Mouse::update(mouseLockPosition.value());
 
       { //Dynamic Lighting
+        static constexpr float MOVE_RADIUS = 100;
+
         static float animationT = 0;
         animationT += System::deltaTime;
         const float c = glm::cos(animationT);
         const float s = glm::sin(animationT);
 
         const std::vector<glm::vec3> points = {
-          glm::vec3(0, c * 5, s * 5),
-          glm::vec3(c * 5, 0, s * 5),
-          glm::vec3(c * 5, s * 5, 0),
-          -glm::vec3(0, c * 5, s * 5),
-          -glm::vec3(c * 5, 0, s * 5),
-          -glm::vec3(c * 5, s * 5, 0),
+          glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
+          glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
+          glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
+          -glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
+          -glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
+          -glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
         };
         for(int i = 0; i < Core::lights.size(); i++) Core::lights[i].position = points[i];
 
@@ -223,6 +241,7 @@ int main(int argc, char *argv[]) {
       Core::SetState(Renderer::State::OpenGL); {
         Transform transform;
         meshRenderer.draw(transform.getMatrix());
+        meshRenderer.draw(meshInstances);
 
         if(System::ShowMeshNormals) {
           Mesh normalMesh = MeshHelper::GenerateNormalLines(mesh, {0,0,1,1});
