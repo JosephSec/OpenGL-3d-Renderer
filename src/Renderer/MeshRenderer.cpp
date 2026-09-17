@@ -1,4 +1,5 @@
-#include <Engine/Renderer/MeshRenderer.hpp>
+#include <Renderer/MeshRenderer.hpp>
+using namespace Renderer;
 
 #include <iostream>
 
@@ -86,13 +87,13 @@ void MeshRenderer::update() {
 }
 void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   if(mesh == nullptr) return;
-  
+
   backFaceCulling? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-  
+
   if(shader != nullptr) {
     glUseProgram(shader->program);
     shader->SetUniform("model", _matrix);
-    shader->SetUniform("uniform", glm::transpose(glm::inverse(glm::mat3x3(_matrix))));
+    
   } else glUseProgram(0);
 
   glBindVertexArray(vao);

@@ -1,4 +1,5 @@
-#include <Engine/Renderer/Camera.hpp>
+#include <Renderer/Camera.hpp>
+using namespace Renderer;
 
 
 Camera::Camera(const glm::vec3 _pos, const glm::quat _rotation)

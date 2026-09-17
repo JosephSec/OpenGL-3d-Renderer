@@ -8,7 +8,7 @@ out vec4 FragColor;
 
 struct Light {
   vec3 position;
-  vec4 color;
+  vec3 color;
   float radius;
 };
 
@@ -20,20 +20,16 @@ uniform Light lights[MAX_LIGHTS];
 
 void main() {
   vec3 normal = normalize(vNormal);
-  vec3 totalLight = vec3(0);
+  vec3 totalLight = ambientLight.rgb * ambientLight.a;
 
   for(int i = 0; i < lightCount; i++) {
     vec3 lightDir = lights[i].position - vPos;
     float dist = length(lightDir);
-    float strength = (1.0 - min(dist, lights[i].radius) / lights[i].radius) * lights[i].color.a;
+    float strength = 1 - min(dist, lights[i].radius) / lights[i].radius;
 
-    if(dist > 1e-4) lightDir /= dist;
-    else lightDir = vec3(0,1,0);
-
-    float diffuse = max(dot(normal, lightDir), 0.0);
-    totalLight += diffuse * strength * lights[i].color.rgb;
+    float diffuse = max(dot(normal, lightDir), 0);
+    totalLight += lights[i].color * diffuse * strength;
   }
-
-  vec3 finalLightVal = totalLight + ambientLight.rgb * ambientLight.a;
-  FragColor = vec4(clamp(vColor.rgb * finalLightVal, 0.0,1.0), vColor.a);
+  
+  FragColor = vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
 }

@@ -1,14 +1,15 @@
 #include <System.hpp>
 #include <User.hpp>
-
-#include <Engine/Renderer.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Renderer/MeshRenderer.hpp>
+#include <Renderer.hpp>
+using namespace Renderer;
 
 #include <SFML/Graphics.hpp>
 
 #include <fstream>
 #include <iostream>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 
 
 static std::vector<std::string> split_string(const std::string &_str, char _ch) {
@@ -32,12 +33,31 @@ static std::vector<std::string> split_string(const std::string &_str, char _ch) 
 static std::string BoolString(const std::string &_str, bool _val) {
   return _str + ": " + std::string(_val? "True" : "False");
 }
+static std::string FloatString(float _val, int _precision = 2) {
+  const float scalar = std::pow(10, _precision);
+
+  std::stringstream ss;
+  ss << static_cast<int>(_val * scalar) / scalar;
+  return ss.str();
+}
+static std::string Vec3String(const glm::vec3 _val, int _precision = 2) {
+  const float scalar = std::pow(10, _precision);
+
+  std::stringstream ss;
+  ss << "(" <<
+    (static_cast<int>(_val.x * scalar) / scalar) << ", " <<
+    (static_cast<int>(_val.y * scalar) / scalar) << ", " <<
+    (static_cast<int>(_val.z * scalar) / scalar) << ")";
+  return ss.str();
+}
 
 
 static void init() {
   System::init();
-  Renderer::init({800 + 225 * 2, 600}, "Game Engine");
+  Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
   User::init();
+
+  Core::window->setVerticalSyncEnabled(true);
 }
 int main(int argc, char *argv[]) {
   init();
@@ -50,22 +70,26 @@ int main(int argc, char *argv[]) {
 
   Camera *camera = new Camera();
   camera->fov = 90;
-  camera->transform.position = glm::vec3(2,1,-2);
-  camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-15), glm::vec3(1,0,0));
-  Renderer::SetCamera(camera);
 
-  Renderer::ambientLight = {1,1,1,1};
-  Renderer::lights.push_back(Light{
-    {1,1,-1},
-    {1,0,0,1},
-    20
-  });
-  Renderer::UpdateDynamicLighting();
+  camera->transform.position = glm::vec3(2.5,2,-4.5);
+  camera->transform.rotation = glm::angleAxis(glm::radians<float>(145), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
+  Core::SetCamera(camera);
+
+  Core::ambientLight = {0,0,1,.1};
+  Core::lights = {
+    Light{{0,0,0}, {1,0,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,1,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,0,1}, 5.0f, 1.0f},
+    Light{{0,0,0}, {1,1,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {1,0,1}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,1,1}, 5.0f, 1.0f},
+  };
+  Core::UpdateDynamicLighting();
 
   Mesh mesh;
-  MeshRenderer meshRenderer = MeshRenderer(nullptr, Renderer::GetShader("Lit"));
+  MeshRenderer meshRenderer = MeshRenderer(nullptr, Core::GetShader("Lit"));
 
-  if constexpr(false) { //Load Camera Mesh
+  if constexpr(true) { //Load Camera
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
 
     std::vector<glm::vec3> temp_positions;
@@ -98,7 +122,7 @@ int main(int argc, char *argv[]) {
             int uIndex = std::stoi(subParts[1]) - 1;
             int nIndex = std::stoi(subParts[2]) - 1;
 
-            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, temp_normals[nIndex]});
+            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
             mesh.indices.push_back(mesh.vertices.size() - 1);
           }
         }
@@ -108,63 +132,118 @@ int main(int argc, char *argv[]) {
     }
 
     file.close();
-
-    meshRenderer.setMesh(&mesh);
   }
-  if constexpr(true) { //Load Triangle Mesh
-    mesh.vertices = {
-      Mesh::Vertex{{ 1,-1,0}, {1,1,1,1}, {0,0,1}},
-      Mesh::Vertex{{ 0, 1,0}, {1,1,1,1}, {0,0,1}},
-      Mesh::Vertex{{-1,-1,0}, {1,1,1,1}, {0,0,1}},
-    };
-    mesh.indices = {0,1,2};
-
-    meshRenderer.setMesh(&mesh);
-  }
+  if constexpr(false) mesh = MeshHelper::GeneratePlane(glm::vec2(30,30), glm::ivec2(3,3));
+  meshRenderer.setMesh(&mesh);
 
 
-  while(Renderer::window->isOpen()) {
-    while(const auto &eventOpt = Renderer::window->pollEvent()) {
+  while(Core::window->isOpen()) {
+    while(const auto &eventOpt = Core::window->pollEvent()) {
       const auto &event = *eventOpt;
 
-      if(event.is<sf::Event::Closed>()) Renderer::window->close();
+      if(event.is<sf::Event::Closed>()) Core::window->close();
       else if(event.is<sf::Event::KeyPressed>()) User::HandleEvent(event);
-      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::UpdateWindowSize();
+      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Core::UpdateWindowSize();
     }
 
 
     { //Update
+      static std::optional<glm::ivec2> mouseLockPosition;
+
       System::update();
-      User::Mouse::update();
+      if(mouseLockPosition.has_value() == false) User::Mouse::update();
+      else User::Mouse::update(mouseLockPosition.value());
+
+      { //Dynamic Lighting
+        static float animationT = 0;
+        animationT += System::deltaTime;
+        const float c = glm::cos(animationT);
+        const float s = glm::sin(animationT);
+
+        const std::vector<glm::vec3> points = {
+          glm::vec3(0, c * 5, s * 5),
+          glm::vec3(c * 5, 0, s * 5),
+          glm::vec3(c * 5, s * 5, 0),
+          -glm::vec3(0, c * 5, s * 5),
+          -glm::vec3(c * 5, 0, s * 5),
+          -glm::vec3(c * 5, s * 5, 0),
+        };
+        for(int i = 0; i < Core::lights.size(); i++) Core::lights[i].position = points[i];
+
+        Core::UpdateDynamicLighting();
+      } //Dynamic Lighting
+
+      if(Core::window->hasFocus() == true) { //Camera Movement
+        static constexpr float sensitivity = 1;
+        static constexpr float slowModeSpeed = 10;
+        static constexpr float fastModeSpeed = 20;
+
+        if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
+          mouseLockPosition = Core::windowSize / 2;
+
+          glm::vec3 moveDir = glm::vec3(0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
+          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
+          if(glm::length(moveDir) != 0) {
+            const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
+            camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
+          }
+
+          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+            const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * sensitivity * System::deltaTime;
+
+            const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
+            const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+            camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
+          }
+
+          Core::UpdateViewMatrix();
+        }
+        else if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle)) {
+          mouseLockPosition = Core::windowSize / 2;
+
+          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
+            const glm::vec2 lookDelta = glm::vec2(User::Mouse::delta.x, -User::Mouse::delta.y) * sensitivity * System::deltaTime;
+            camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
+
+            Core::UpdateViewMatrix();
+          }      
+        }
+        else mouseLockPosition = std::nullopt;
+      }
     }
 
     { //Render
-      Renderer::clear();
+      Core::clear();
 
-      Renderer::SetState(RenderState::OpenGL); {
-        meshRenderer.draw(Transform().getMatrix());
-        { //Normals
-          Mesh normalMesh(MeshType::Lines);
-          
-          glm::vec3 normal = mesh.vertices[mesh.indices[0]].normal;
-          glm::vec3 center = (mesh.vertices[mesh.indices[0]].position +
-                              mesh.vertices[mesh.indices[1]].position +
-                              mesh.vertices[mesh.indices[2]].position) / 3.0f;
+      Core::SetState(Renderer::State::OpenGL); {
+        Transform transform;
+        meshRenderer.draw(transform.getMatrix());
 
-          normalMesh.vertices.push_back(Mesh::Vertex{center, {0,0,1,1}});
-          normalMesh.vertices.push_back(Mesh::Vertex{center + normal, {0,0,1,1}});
+        if(System::ShowMeshNormals) {
+          Mesh normalMesh = MeshHelper::GenerateNormalLines(mesh, {0,0,1,1});
+          MeshRenderer normalRenderer(&normalMesh, Core::GetShader("Unlit"));
+          normalRenderer.draw(transform.getMatrix());
+        }
+        if(System::ShowLightGizmos) {
+          Mesh lightMesh = MeshHelper::GenerateUVSphere(8,8,.25f);
+          MeshRenderer lightRenderer(&lightMesh, Core::GetShader("Unlit"));
+          lightRenderer.backFaceCulling = false;
 
-          normalMesh.indices.push_back(0);
-          normalMesh.indices.push_back(1);
-
-          MeshRenderer normalRenderer(&normalMesh, Renderer::GetShader("Unlit"));
-          normalRenderer.draw(Transform().getMatrix());
-        } //Normals
+          for(const Light &light : Core::lights) {
+            MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
+            lightRenderer.update();
+            lightRenderer.draw(Transform(light.position).getMatrix());
+          }
+        }
       }
 
-
-      Renderer::SetState(RenderState::UI); {
-        const sf::Vector2f size = sf::Vector2f{Renderer::windowSize.x / 6.0f, static_cast<float>(Renderer::windowSize.y)};
+      Core::SetState(Renderer::State::UI); {
+        const sf::Vector2f size = sf::Vector2f{Core::windowSize.x / 6.0f, static_cast<float>(Core::windowSize.y)};
 
         sf::RectangleShape background(size);
         background.setFillColor(sf::Color(15,15,15));
@@ -177,26 +256,32 @@ int main(int argc, char *argv[]) {
 
         { //Left
           background.setPosition(sf::Vector2f{0,0});
-          Renderer::window->draw(background);
+          Core::window->draw(background);
 
           const std::vector<std::string> elements = {
-            BoolString("F1| Wireframe Mode", Renderer::WireframeMode),
+            BoolString("F1| Wireframe Mode", Core::WireframeMode),
+            BoolString("F2| Show Normals", System::ShowMeshNormals),
+            BoolString("F3| Light Gizmos", System::ShowLightGizmos),
           };
 
           for(int i = 0; i < elements.size(); i++) {
             text.setString(elements[i]);
             text.setPosition(listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Renderer::window->draw(text);
+            Core::window->draw(text);
           }
         } //Left
         { //Right
-          background.setPosition(sf::Vector2f{static_cast<float>(Renderer::windowSize.x - size.x),0});
-          Renderer::window->draw(background);
+          background.setPosition(sf::Vector2f{static_cast<float>(Core::windowSize.x - size.x),0});
+          Core::window->draw(background);
 
-          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Renderer::camera->transform.position * 100.0f)) / 100.0f;
+          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Core::camera->transform.position * 100.0f)) / 100.0f;
+          glm::vec3 camEuler;
+          glm::extractEulerAngleYXZ(glm::mat4_cast(camera->transform.rotation), camEuler.y, camEuler.x, camEuler.z);
+          camEuler *= (180.0f / glm::pi<float>());
 
           const std::vector<std::string> elements = {
-            std::format("Editor Cam Pos ({}, {}, {})", camPos.x,camPos.y,camPos.z),
+            std::format("Editor Cam Pos {}", Vec3String(camPos)),
+            std::format("Editor Cam Rot {}", Vec3String(camEuler)),
           };
 
           const sf::Vector2f start = background.getPosition();
@@ -204,16 +289,16 @@ int main(int argc, char *argv[]) {
           for(int i = 0; i < elements.size(); i++) {
             text.setString(elements[i]);
             text.setPosition(start + listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Renderer::window->draw(text);
+            Core::window->draw(text);
           }
         } //Right
       }
 
-      Renderer::display();
+      Core::display();
     }
   }
 
-  Renderer::end();
+  Core::end();
 
   return 0;
 }

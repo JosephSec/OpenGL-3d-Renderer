@@ -1,6 +1,5 @@
-#include <Engine/Renderer/Mesh.hpp>
-
-#include <cstring>
+#include <Renderer/Mesh.hpp>
+using namespace Renderer;
 
 
 Mesh::Mesh(MeshType _type) : type(_type) {}

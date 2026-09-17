@@ -11,13 +11,12 @@ out vec3 vPos;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
-uniform mat3 normal;
 
 void main() {
   vec4 worldPos = model * vec4(aPos, 1.0);
 
   vPos = worldPos.xyz;
-  vNormal = normalize(normal * aNormal);
+  vNormal = normalize(mat3(transpose(inverse(model))) * aNormal);
   vColor = aColor;
 
   gl_Position = projection * view * worldPos;

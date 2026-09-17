@@ -12,6 +12,9 @@ public:
   static sf::Clock timeClock;
   static float deltaTime;
 
+  static bool ShowMeshNormals;
+  static bool ShowLightGizmos;
+
 
   static void init();
   static void update();

@@ -1,8 +1,8 @@
-#include <Engine/Renderer/Shader.hpp>
+#include <Renderer/Shader.hpp>
+using namespace Renderer;
 
 #include <fstream>
 #include <sstream>
-
 #include <iostream>
 
 
@@ -43,8 +43,19 @@ GLuint Shader::CompileShader(GLenum type, const char *_src) {
   if(!success) {
     char log[512];
     glGetShaderInfoLog(program, 512, nullptr, log);
-    std::cerr << "[SHADER ERROR]:\n" << log << "\n\n" << _src;
+    std::cerr << "[SHADER ERROR]: ";
+    throw std::runtime_error("Failed to compile shader.\nLog: " + std::string(log));
   }
 
   return program;
+}
+
+GLint Shader::tryGetUniformLocation(GLuint _program, const std::string &_name) {
+  GLint location = glGetUniformLocation(_program, _name.c_str());
+  
+  if(location == -1) {
+    std::cout << "[SHADER ERROR]: Attempted to find shader uniform that does not exists (" << _name << ")\n";
+  }
+
+  return location;
 }
