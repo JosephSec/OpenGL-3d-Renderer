@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Engine/API.hpp>
-#include <Engine/Transform.hpp>
+#include <Renderer/API.hpp>
+#include <Renderer/Transform.hpp>
 
 
 namespace Renderer {
-  class ZENGINE_API Camera {
+  class HORDE3D_API Camera {
   public:
     Camera(const glm::vec3 _pos = glm::vec3(0), const glm::quat _rotation = glm::quat());
 

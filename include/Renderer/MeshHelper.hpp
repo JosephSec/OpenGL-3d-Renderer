@@ -3,12 +3,12 @@
 #include <filesystem>
 #include <glm/trigonometric.hpp>
 
-#include <Engine/API.hpp>
-#include <Engine/Renderer/Mesh.hpp>
+#include <Renderer/API.hpp>
+#include <Renderer/Mesh.hpp>
 
 
 namespace Renderer {
-  class ZENGINE_API MeshHelper {
+  class HORDE3D_API MeshHelper {
   public:  
     static bool SaveMesh(const Mesh &_mesh, const std::filesystem::path &_path);
     static bool LoadMesh(Mesh &_mesh, const std::filesystem::path &_path);

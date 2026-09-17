@@ -9,7 +9,7 @@
 #include <SFML/Graphics/Color.hpp>
 #include <GL/glew.h>
 
-#include <Engine/API.hpp>
+#include <Renderer/API.hpp>
 
 
 namespace Renderer {
@@ -17,7 +17,7 @@ namespace Renderer {
     LitTriangle,
     Lines,
   };
-  class ZENGINE_API Mesh {
+  class HORDE3D_API Mesh {
   public:
     struct Vertex {
     public:

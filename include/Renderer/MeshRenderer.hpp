@@ -2,13 +2,13 @@
 
 #include <GL/glew.h>
 
-#include <Engine/API.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Renderer/Shader.hpp>
+#include <Renderer/API.hpp>
+#include <Renderer/Mesh.hpp>
+#include <Renderer/Shader.hpp>
 
 
 namespace Renderer {
-  class ZENGINE_API MeshRenderer {
+  class HORDE3D_API MeshRenderer {
   public:
     MeshRenderer() {}
     MeshRenderer(Mesh *_mesh, Shader *_shader);

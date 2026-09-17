@@ -12,11 +12,11 @@
 
 #include <GL/glew.h>
 
-#include <Engine/API.hpp>
+#include <Renderer/API.hpp>
 
 
 namespace Renderer {
-  class ZENGINE_API Shader {
+  class HORDE3D_API Shader {
   public:
     static inline void SetShaderFolder(const std::filesystem::path &_path) {
       s_shaderFolder = _path;

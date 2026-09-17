@@ -12,8 +12,7 @@
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
-        "${workspaceFolder}/src/Engine/*.cpp",
-        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
+        "${workspaceFolder}/src/Renderer/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
@@ -24,15 +23,17 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DZENGINE_DLL",
+        "-DHORDE3D_DLL",
 
         "-I${workspaceFolder}/include",
-        "${workspaceFolder}/src/*.cpp",
+        "${workspaceFolder}/src/main.cpp",
+        "${workspaceFolder}/src/System.cpp",
+        "${workspaceFolder}/src/User.cpp",
         
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
-        "${workspaceFolder}/bin/zengine.dll",
+        "${workspaceFolder}/bin/horde3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
       ],
@@ -43,15 +44,17 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DZENGINE_DLL",
+        "-DHORDE3D_DLL",
 
         "-I${workspaceFolder}/include",
-        "${workspaceFolder}/src/*.cpp",
+        "${workspaceFolder}/src/main.cpp",
+        "${workspaceFolder}/src/System.cpp",
+        "${workspaceFolder}/src/User.cpp",
         
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
-        "${workspaceFolder}/bin/zengine.dll",
+        "${workspaceFolder}/bin/horde3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
       ],
@@ -61,15 +64,15 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DZENGINE_DLL_BUILD",
+        "-DHORDE3D_DLL_BUILD",
 
         "-I${workspaceFolder}/include",
         
         "-O3", "-flto",
-        "-shared", "-o", "${workspaceFolder}/bin/zengine.dll",
+        "-shared", "-o", "${workspaceFolder}/bin/horde3d.dll",
 
-        "${workspaceFolder}/src/Engine/*.cpp",
-        "${workspaceFolder}/src/Engine/Renderer/*.cpp",
+        "${workspaceFolder}/src/Renderer.cpp",
+        "${workspaceFolder}/src/Renderer/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
@@ -80,7 +83,7 @@
       "type": "shell",
       "command": "${workspaceFolder}/assets/UpdateGlobalFiles.bat",
       "args": [
-        "ZEngine", "Engine"
+        "horde3d", "Engine"
       ],
       "dependsOn": ["Compile DLL"]
     },

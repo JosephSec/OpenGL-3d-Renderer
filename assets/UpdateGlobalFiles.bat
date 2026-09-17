@@ -11,7 +11,7 @@ shift
 @REM DLL FILES
 if not exist %GLOBAL_FOLDER%\bin mkdir %GLOBAL_FOLDER%\bin
 
-set DLL_FILE=%ParentPath%\bin\zengine.dll
+set DLL_FILE=%ParentPath%\bin\horde3d.dll
 if not exist %DLL_FILE% (
   echo dll file not found "%DLL_FILE%"
   exit

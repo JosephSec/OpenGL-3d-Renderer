@@ -1,16 +1,15 @@
 #include <System.hpp>
 #include <User.hpp>
+#include <Renderer.hpp>
+using namespace Renderer;
 
 #include <SFML/Graphics.hpp>
 
 #include <fstream>
 #include <iostream>
 
-#include <Engine/Renderer.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Renderer/MeshRenderer.hpp>
-#include <Engine/Renderer/MeshHelper.hpp>
-using namespace Renderer;
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 
 
 static std::vector<std::string> split_string(const std::string &_str, char _ch) {
@@ -34,11 +33,28 @@ static std::vector<std::string> split_string(const std::string &_str, char _ch) 
 static std::string BoolString(const std::string &_str, bool _val) {
   return _str + ": " + std::string(_val? "True" : "False");
 }
+static std::string FloatString(float _val, int _precision = 2) {
+  const float scalar = std::pow(10, _precision);
+
+  std::stringstream ss;
+  ss << static_cast<int>(_val * scalar) / scalar;
+  return ss.str();
+}
+static std::string Vec3String(const glm::vec3 _val, int _precision = 2) {
+  const float scalar = std::pow(10, _precision);
+
+  std::stringstream ss;
+  ss << "(" <<
+    (static_cast<int>(_val.x * scalar) / scalar) << ", " <<
+    (static_cast<int>(_val.y * scalar) / scalar) << ", " <<
+    (static_cast<int>(_val.z * scalar) / scalar) << ")";
+  return ss.str();
+}
 
 
 static void init() {
   System::init();
-  Core::init({800 + 225 * 2, 600}, "Game Engine");
+  Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
   User::init();
 
   Core::window->setVerticalSyncEnabled(true);
@@ -54,23 +70,19 @@ int main(int argc, char *argv[]) {
 
   Camera *camera = new Camera();
   camera->fov = 90;
-  camera->transform.position = glm::vec3(3,3,-3);
-  camera->transform.rotation = glm::angleAxis(glm::radians<float>(45 + 90), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-45), glm::vec3(1,0,0));
+  camera->transform.position = glm::vec3(2.5,2,-4.5);
+  camera->transform.rotation = glm::angleAxis(glm::radians<float>(145), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
   Core::SetCamera(camera);
 
   Core::ambientLight = {0,0,1,.1};
-  Core::lights.push_back(Light{
-    {0,1,0},
-    {1,0,0},
-    5.0f,
-    1.0f
-  });
-  Core::lights.push_back(Light{
-    {0,1,0},
-    {0,1,0},
-    5.0f,
-    1.0f
-  });
+  Core::lights = {
+    Light{{0,0,0}, {1,0,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,1,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,0,1}, 5.0f, 1.0f},
+    Light{{0,0,0}, {1,1,0}, 5.0f, 1.0f},
+    Light{{0,0,0}, {1,0,1}, 5.0f, 1.0f},
+    Light{{0,0,0}, {0,1,1}, 5.0f, 1.0f},
+  };
   Core::UpdateDynamicLighting();
 
   Mesh mesh;
@@ -141,13 +153,26 @@ int main(int argc, char *argv[]) {
       if(mouseLockPosition.has_value() == false) User::Mouse::update();
       else User::Mouse::update(mouseLockPosition.value());
 
-      static float animationT = 0;
-      animationT += System::deltaTime;
-      Core::lights[0].position = glm::vec3(glm::cos(animationT) * 5, 1, glm::sin(animationT) * 5);
-      Core::lights[1].position = glm::vec3(0, glm::cos(animationT) * 5, glm::sin(animationT) * 5);
-      Core::UpdateDynamicLighting();
+      { //Dynamic Lighting
+        static float animationT = 0;
+        animationT += System::deltaTime;
+        const float c = glm::cos(animationT);
+        const float s = glm::sin(animationT);
 
-      { //Camera Movement
+        const std::vector<glm::vec3> points = {
+          glm::vec3(0, c * 5, s * 5),
+          glm::vec3(c * 5, 0, s * 5),
+          glm::vec3(c * 5, s * 5, 0),
+          -glm::vec3(0, c * 5, s * 5),
+          -glm::vec3(c * 5, 0, s * 5),
+          -glm::vec3(c * 5, s * 5, 0),
+        };
+        for(int i = 0; i < Core::lights.size(); i++) Core::lights[i].position = points[i];
+
+        Core::UpdateDynamicLighting();
+      } //Dynamic Lighting
+
+      if(Core::window->hasFocus() == true) { //Camera Movement
         static constexpr float sensitivity = 1;
         static constexpr float slowModeSpeed = 10;
         static constexpr float fastModeSpeed = 20;
@@ -249,9 +274,13 @@ int main(int argc, char *argv[]) {
           Core::window->draw(background);
 
           const glm::vec3 &camPos = glm::vec3(glm::ivec3(Core::camera->transform.position * 100.0f)) / 100.0f;
+          glm::vec3 camEuler;
+          glm::extractEulerAngleYXZ(glm::mat4_cast(camera->transform.rotation), camEuler.y, camEuler.x, camEuler.z);
+          camEuler *= (180.0f / glm::pi<float>());
 
           const std::vector<std::string> elements = {
-            std::format("Editor Cam Pos ({}, {}, {})", camPos.x,camPos.y,camPos.z),
+            std::format("Editor Cam Pos {}", Vec3String(camPos)),
+            std::format("Editor Cam Rot {}", Vec3String(camEuler)),
           };
 
           const sf::Vector2f start = background.getPosition();

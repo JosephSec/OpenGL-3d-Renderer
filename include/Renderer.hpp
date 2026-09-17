@@ -4,10 +4,13 @@
 
 #include <SFML/Graphics/RenderWindow.hpp>
 
-#include <Engine/API.hpp>
-#include <Engine/Renderer/Shader.hpp>
-#include <Engine/Renderer/Camera.hpp>
-#include <Engine/Renderer/Light.hpp>
+#include <Renderer/API.hpp>
+#include <Renderer/Mesh.hpp>
+#include <Renderer/MeshRenderer.hpp>
+#include <Renderer/MeshHelper.hpp>
+#include <Renderer/Shader.hpp>
+#include <Renderer/Camera.hpp>
+#include <Renderer/Light.hpp>
 
 
 namespace Renderer {
@@ -15,7 +18,7 @@ namespace Renderer {
     OpenGL,
     UI
   };
-  class ZENGINE_API Core {
+  class HORDE3D_API Core {
   public:
     static sf::RenderWindow *window;
     static glm::ivec2 windowSize;

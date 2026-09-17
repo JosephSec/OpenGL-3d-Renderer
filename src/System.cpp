@@ -5,7 +5,7 @@
 
 #include <SFML/System/Time.hpp>
 
-#include <Engine/Renderer/Shader.hpp>
+#include <Renderer/Shader.hpp>
 
 
 std::string System::PATH;
@@ -14,7 +14,7 @@ sf::Clock System::timeClock;
 float System::deltaTime;
 
 bool System::ShowMeshNormals = false;
-bool System::ShowLightGizmos = false;
+bool System::ShowLightGizmos = true;
 
 
 void System::init() {

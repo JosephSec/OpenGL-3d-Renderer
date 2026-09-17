@@ -3,11 +3,11 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
-#include <Engine/API.hpp>
+#include <Renderer/API.hpp>
 
 
 namespace Renderer {
-  struct ZENGINE_API Light {
+  struct HORDE3D_API Light {
   public:
     Light(const glm::vec3 &_position = glm::vec3(0), const glm::vec3 _color = glm::vec3(1), float _radius = 1, float _strength = 1);
 
