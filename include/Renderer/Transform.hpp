@@ -17,7 +17,11 @@ namespace Renderer {
       const glm::vec3 _scale = glm::vec3(1)
     );
 
-    glm::mat4x4 getMatrix() const;
+    glm::mat4x4 getMatrix() const noexcept;
+
+    glm::vec3 right() const noexcept;
+    glm::vec3 up() const noexcept;
+    glm::vec3 forward() const noexcept;
 
 
     glm::vec3 position;

@@ -90,21 +90,6 @@ int main(int argc, char *argv[]) {
   Mesh mesh;
   MeshRenderer meshRenderer = MeshRenderer(nullptr, Core::GetShader("Lit"));
 
-  std::vector<glm::mat4x4> meshInstances;
-  { //Generate Mesh Instances
-    static constexpr float SPAWN_RADIUS = 100;
-    static constexpr float SCALE_RANGE_MIN = .1f;
-    static constexpr float SCALE_RANGE_MAX = 5;
-
-    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
-    std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
-    std::uniform_real_distribution<float> randScale(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
-
-    for(int i = 0; i < 500; i++) {
-      meshInstances.push_back(Transform(glm::vec3(randRadius(gen),randRadius(gen),randRadius(gen)), glm::quat(), glm::vec3(randScale(gen))).getMatrix());
-    }
-  }
-
   if constexpr(true) { //Load Camera
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
 
@@ -152,6 +137,29 @@ int main(int argc, char *argv[]) {
   if constexpr(false) mesh = MeshHelper::GeneratePlane(glm::vec2(30,30), glm::ivec2(3,3));
   meshRenderer.setMesh(&mesh);
 
+  std::vector<Transform> meshInstances;
+  { //Generate Mesh Instances
+    static constexpr uint64_t SPAWN_COUNT = 100;
+    static constexpr float SPAWN_RADIUS = 50;
+    static constexpr float ROTATION_RANGE = 180;
+    static constexpr float SCALE_RANGE_MIN = .1f;
+    static constexpr float SCALE_RANGE_MAX = 2.5f;
+
+    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+    std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
+    std::uniform_real_distribution<float> randSpin(-ROTATION_RANGE, ROTATION_RANGE);
+    std::uniform_real_distribution<float> randSize(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
+
+    for(int i = 0; i < SPAWN_COUNT; i++) {
+      const glm::vec3 randomPos = {randRadius(gen),randRadius(gen),randRadius(gen)};
+      const glm::quat randomRot = glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(1,0,0));
+
+      meshInstances.push_back(Transform(randomPos, randomRot, glm::vec3(randSize(gen))));
+    }
+
+    meshRenderer.updateInstancingData(meshInstances);
+  }
+
 
   while(Core::window->isOpen()) {
     while(const auto &eventOpt = Core::window->pollEvent()) {
@@ -169,6 +177,13 @@ int main(int argc, char *argv[]) {
       System::update();
       if(mouseLockPosition.has_value() == false) User::Mouse::update();
       else User::Mouse::update(mouseLockPosition.value());
+
+      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) { //GPU Instancing Updates
+        for(Transform &_instance : meshInstances) {
+          _instance.position -= glm::normalize(_instance.position) * System::deltaTime * 3.0f;
+        }
+        meshRenderer.updateInstancingData(meshInstances);
+      }
 
       { //Dynamic Lighting
         static constexpr float MOVE_RADIUS = 100;
@@ -241,7 +256,7 @@ int main(int argc, char *argv[]) {
       Core::SetState(Renderer::State::OpenGL); {
         Transform transform;
         meshRenderer.draw(transform.getMatrix());
-        meshRenderer.draw(meshInstances);
+        meshRenderer.drawInstanced();
 
         if(System::ShowMeshNormals) {
           Mesh normalMesh = MeshHelper::GenerateNormalLines(mesh, {0,0,1,1});
@@ -255,9 +270,26 @@ int main(int argc, char *argv[]) {
 
           for(const Light &light : Core::lights) {
             MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
-            lightRenderer.update();
+            lightRenderer.updateMeshData();
             lightRenderer.draw(Transform(light.position).getMatrix());
           }
+        }
+        if(true) { //Show Transform Gizmos
+          Mesh mesh(MeshType::Lines);
+          mesh.vertices = {
+            Mesh::Vertex{{0,0,0}, {1,0,0,1}},
+            Mesh::Vertex{transform.right(), {1,0,0,1}},
+
+            Mesh::Vertex{{0,0,0}, {0,1,0,1}},
+            Mesh::Vertex{transform.up(), {0,1,0,1}},
+
+            Mesh::Vertex{{0,0,0}, {0,0,1,1}},
+            Mesh::Vertex{transform.forward(), {0,0,1,1}},
+          };
+          mesh.indices = {0,1,2,3,4,5};
+
+          MeshRenderer transformRenderer(&mesh, Core::GetShader("Unlit"));
+          transformRenderer.draw(transform.getMatrix());
         }
       }
 

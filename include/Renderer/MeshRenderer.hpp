@@ -9,9 +9,9 @@
 
 
 namespace Renderer {
-  //see if theres benefits to switching the buffer data type to dynamic in update
-  //has any benefits. the thought being that, if update is never called the mesh
-  //is probably static. after update is called, the mesh is likely dynamic
+  //see if theres benefits to switching the buffer data type to dynamic in updateMeshData
+  //has any benefits. the thought being that, if updateMeshData is never called the mesh
+  //is probably static. after updateMeshData is called, the mesh is likely dynamic
 
   class HORDE3D_API MeshRenderer {
   public:
@@ -23,20 +23,25 @@ namespace Renderer {
     MeshRenderer &operator=(const MeshRenderer &_meshRenderer);
 
 
-    void update();
+    void updateMeshData();
+    void updateInstancingData(const std::vector<glm::mat4x4> &_matrices);
+    void updateInstancingData(const std::vector<Transform> &_transforms);
+    void clearInstancingData();
 
     void draw(const glm::mat4x4 &_matrix) const;
     inline void draw(const Transform &_transform) const;
-    void draw(const std::vector<glm::mat4x4> &_matrices) const;
-    //Attemp gpu instancing
+    void drawInstanced() const;
 
     void setMesh(Mesh *_mesh);
     void setShader(Shader *_shader);
 
 
-    GLuint vao, vbo, ebo;
-    Mesh *mesh = nullptr;
-    Shader *shader = nullptr;
     bool backFaceCulling = true;
+
+  private:
+    GLuint m_vao, m_vbo, m_ebo, m_instanceVbo;
+    Mesh *m_mesh = nullptr;
+    Shader *m_shader = nullptr;
+    uint64_t m_instanceCount = 0;
   };
 }
