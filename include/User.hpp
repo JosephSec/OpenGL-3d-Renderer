@@ -20,5 +20,6 @@ public:
 
   static void init();
 
-  static void HandleEvent(const sf::Event &_event);
+  static void HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed);
+  static void HandleMouseButtonPressed(const sf::Event::MouseButtonPressed *_mouseButtonPressed);
 };

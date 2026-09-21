@@ -1,6 +1,10 @@
 #include <Renderer/MeshHelper.hpp>
 using namespace Renderer;
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/geometric.hpp>
+#include <glm/gtx/norm.hpp>
+
 #include <fstream>
 #include <iostream>
 
@@ -64,7 +68,7 @@ void MeshHelper::RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &
   }
 }
 
-Mesh MeshHelper::GenerateNormalLines(const Mesh &_mesh, const glm::vec4 _color) {
+Mesh MeshHelper::GenerateNormalGizmos(const Mesh &_mesh, const glm::vec4 _color) {
   Mesh mesh(MeshType::Lines);
   
   for(int i = 0; i < _mesh.indices.size() / 3; i++) {
@@ -88,17 +92,60 @@ Mesh MeshHelper::GenerateNormalLines(const Mesh &_mesh, const glm::vec4 _color) 
 }
 
 
+glm::vec3 MeshHelper::CalculateFaceNormal(const glm::vec3 _a, const glm::vec3 _b, const glm::vec3 _c) {
+  glm::vec3 edge1 = _b - _a;
+  glm::vec3 edge2 = _c - _a;
+  glm::vec3 normal = glm::cross(edge1, edge2);
+
+  if(glm::length2(normal) < 0.00001f) return glm::vec3(0.0f, 0.0f, 0.0f); 
+
+  return -glm::normalize(normal);
+}
+void MeshHelper::CalculateNormals(Mesh &_mesh, bool _useIndices) {
+  if(_useIndices == false) {
+    const unsigned int vertexCount = _mesh.vertices.size();
+
+    for(int i = 0; i < vertexCount; i += 3) {
+      Mesh::Vertex &a = _mesh.vertices[i + 0];
+      Mesh::Vertex &b = _mesh.vertices[i + 1];
+      Mesh::Vertex &c = _mesh.vertices[i + 2];
+
+      const glm::vec3 normal = CalculateFaceNormal(a.position, b.position, c.position);
+
+      a.normal = normal;
+      b.normal = normal;
+      c.normal = normal;
+    }
+  }
+  else if(_useIndices == true) {
+    const unsigned int indexCount = _mesh.indices.size();
+
+    for(int i = 0; i < indexCount; i += 3) {
+      Mesh::Vertex &a = _mesh.vertices[_mesh.indices[i + 0]];
+      Mesh::Vertex &b = _mesh.vertices[_mesh.indices[i + 1]];
+      Mesh::Vertex &c = _mesh.vertices[_mesh.indices[i + 2]];
+
+      const glm::vec3 normal = CalculateFaceNormal(a.position, b.position, c.position);
+
+      a.normal = normal;
+      b.normal = normal;
+      c.normal = normal;
+    }
+  }
+}
+
 Mesh MeshHelper::GenerateCircle(uint16_t _resolution, float _radius) {
   Mesh mesh;
   
   const float phiDif = glm::two_pi<float>() / _resolution;
   
   mesh.vertices.resize(1 + _resolution);
-  mesh.vertices[0] = Mesh::Vertex{glm::vec3(0), {1,1,1, 1}};
+  mesh.vertices[0] = Mesh::Vertex{glm::vec3(0), {1,1,1, 1}, {0,0,1}};
   for(int i = 0; i < _resolution; i++) {
     mesh.vertices[i + 1] = Mesh::Vertex{
       glm::vec3{glm::cos(phiDif * i), -glm::sin(phiDif * i), 0} * _radius,
-      glm::vec4{1,1,1, 1}
+      {1,1,1, 1},
+      {0,0,1},
     };
   }
 
@@ -119,7 +166,7 @@ Mesh MeshHelper::GenerateCircle(uint16_t _resolution, float _radius) {
 Mesh MeshHelper::GenerateCube(const glm::vec3 _size) {
   Mesh mesh;
 
-  mesh.vertices = {
+  const std::vector<Mesh::Vertex> vertices = {
     Mesh::Vertex{{-.5 * _size.x, -.5 * _size.y,  .5 * _size.z}, {1,1,1, 1}},
     Mesh::Vertex{{-.5 * _size.x,  .5 * _size.y,  .5 * _size.z}, {1,1,1, 1}},
     Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y,  .5 * _size.z}, {1,1,1, 1}},
@@ -129,7 +176,7 @@ Mesh MeshHelper::GenerateCube(const glm::vec3 _size) {
     Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y, -.5 * _size.z}, {1,1,1, 1}},
     Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y, -.5 * _size.z}, {1,1,1, 1}},
   };
-  mesh.indices = {
+  const std::vector<unsigned int> indices = {
     0,1,2, 0,2,3, //+z
     7,6,5, 7,5,4, //-z
     
@@ -140,46 +187,77 @@ Mesh MeshHelper::GenerateCube(const glm::vec3 _size) {
     1,5,6, 1,6,2, //+y
   };
 
+  const unsigned int vertexCount = indices.size();
+  mesh.vertices.resize(vertexCount);
+  mesh.indices.resize(vertexCount);
+  for(int i = 0; i < vertexCount; i++) {
+    mesh.vertices[i] = vertices[indices[i]];
+    mesh.indices[i] = i;
+  }
+
+  CalculateNormals(mesh);
+
   return mesh;
 }
 Mesh MeshHelper::GenerateCylinder(uint16_t _resolution, float _height, float _radius) {
   Mesh mesh;
 
+  std::vector<Mesh::Vertex> vertices;
+  std::vector<unsigned int> indices;
+
   const float phiDif = glm::two_pi<float>() / _resolution;
 
-  mesh.vertices.push_back(Mesh::Vertex{glm::vec3{0,_height / 2.0,0}, {1,1,1, 1}});
+  vertices.push_back(Mesh::Vertex{glm::vec3{0, _height / 2.0,0}, {1,1,1,1}, {0, 1,0}});
   for(int i = 0; i < _resolution; i++) {
-    mesh.vertices.push_back(Mesh::Vertex{{glm::cos(phiDif * i) * _radius, _height / 2.0, glm::sin(phiDif * i) * _radius}, {1,1,1, 1}});
+    vertices.push_back(Mesh::Vertex{
+      {glm::cos(phiDif * i) * _radius, _height / 2.0, glm::sin(phiDif * i) * _radius},
+      {1,1,1, 1},
+      {0,1,0},
+    });
   }
-  mesh.vertices.push_back(Mesh::Vertex{glm::vec3{0,-_height / 2.0,0}, {1,1,1, 1}});
+  vertices.push_back(Mesh::Vertex{glm::vec3{0,-_height / 2.0,0}, {1,1,1,1}, {0,-1,0}});
   for(int i = 0; i < _resolution; i++) {
-    mesh.vertices.push_back(Mesh::Vertex{{glm::cos(phiDif * i) * _radius,-_height / 2.0, glm::sin(phiDif * i) * _radius}, {1,1,1, 1}});
+    vertices.push_back(Mesh::Vertex{
+      {glm::cos(phiDif * i) * _radius,-_height / 2.0, glm::sin(phiDif * i) * _radius},
+      {1,1,1, 1},
+      {0,-1,0},
+    });
   }
 
   const unsigned int top = 0;
-  const unsigned int bottom = 1 + _resolution;
+  const unsigned int bottom = top + 1 + _resolution;
   for(int i = 0; i < _resolution; i++) {
-    const unsigned int a = i + 1;
-    const unsigned int b = a % _resolution + 1;
-    const unsigned int c = bottom + a;
-    const unsigned int d = bottom + b;
+    const unsigned int a = top + 1 + i;
+    const unsigned int b = top + 1 + (i + 1) % _resolution;
+    const unsigned int c = bottom + 1 + i;
+    const unsigned int d = bottom + 1 + (i + 1) % _resolution;
 
-    mesh.indices.push_back(top);
-    mesh.indices.push_back(a);
-    mesh.indices.push_back(b);
+    indices.push_back(top);
+    indices.push_back(a);
+    indices.push_back(b);
 
-    mesh.indices.push_back(d);
-    mesh.indices.push_back(c);
-    mesh.indices.push_back(bottom);
+    indices.push_back(d);
+    indices.push_back(c);
+    indices.push_back(bottom);
 
-    mesh.indices.push_back(a);
-    mesh.indices.push_back(c);
-    mesh.indices.push_back(d);
+    indices.push_back(a);
+    indices.push_back(c);
+    indices.push_back(d);
 
-    mesh.indices.push_back(a);
-    mesh.indices.push_back(d);
-    mesh.indices.push_back(b);
+    indices.push_back(a);
+    indices.push_back(d);
+    indices.push_back(b);
   }
+
+  const unsigned int vertexCount = indices.size();
+  mesh.vertices.resize(vertexCount);
+  mesh.indices.resize(vertexCount);
+  for(int i = 0; i < vertexCount; i++) {
+    mesh.vertices[i] = vertices[indices[i]];
+    mesh.indices[i] = i;
+  }
+
+  CalculateNormals(mesh);
 
   return mesh;
 }
@@ -187,10 +265,10 @@ Mesh MeshHelper::GenerateQuad(const glm::vec2 _size) {
   Mesh mesh;
 
   mesh.vertices = {
-    Mesh::Vertex{{-.5 * _size.x, -.5 * _size.y, 0}, {1,1,1, 1}},
-    Mesh::Vertex{{-.5 * _size.x,  .5 * _size.y, 0}, {1,1,1, 1}},
-    Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y, 0}, {1,1,1, 1}},
-    Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y, 0}, {1,1,1, 1}},
+    Mesh::Vertex{{-.5 * _size.x, -.5 * _size.y, 0}, {1,1,1, 1}, {0,0,1}},
+    Mesh::Vertex{{-.5 * _size.x,  .5 * _size.y, 0}, {1,1,1, 1}, {0,0,1}},
+    Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y, 0}, {1,1,1, 1}, {0,0,1}},
+    Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y, 0}, {1,1,1, 1}, {0,0,1}},
   };
   mesh.indices = {0,1,2, 0,2,3};
 
@@ -277,9 +355,12 @@ Mesh MeshHelper::GenerateUVSphere(uint16_t _segments, uint16_t _rings, float _ra
       float cosPhi = std::cos(phi);
 
 
+      const glm::vec3 position = {_radius * sinTheta * cosPhi, _radius * cosTheta,_radius * sinTheta * sinPhi};
+
       mesh.vertices.push_back(Mesh::Vertex{
-        {_radius * sinTheta * cosPhi, _radius * cosTheta,_radius * sinTheta * sinPhi},
-        {1,1,1, 1}
+        position,
+        {1,1,1, 1},
+        glm::normalize(position)
       });
     }
   }

@@ -29,6 +29,7 @@
         "${workspaceFolder}/src/main.cpp",
         "${workspaceFolder}/src/System.cpp",
         "${workspaceFolder}/src/User.cpp",
+        "${workspaceFolder}/src/UI.cpp",
         
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
@@ -50,6 +51,7 @@
         "${workspaceFolder}/src/main.cpp",
         "${workspaceFolder}/src/System.cpp",
         "${workspaceFolder}/src/User.cpp",
+        "${workspaceFolder}/src/UI.cpp",
         
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",

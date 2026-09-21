@@ -25,7 +25,7 @@ void User::Mouse::update(const glm::ivec2 &_lockedPosition) {
   const sf::Vector2i curMousePos = sf::Mouse::getPosition(*Renderer::Core::window);
   delta = glm::ivec2(curMousePos.x, curMousePos.y) - position;
   position = _lockedPosition;
-  
+
   sf::Mouse::setPosition(sf::Vector2i{position.x,position.y}, *Renderer::Core::window);
 }
 
@@ -34,20 +34,24 @@ void User::init() {
   Mouse::init();
 }
 
-void User::HandleEvent(const sf::Event &_event) {
-  if(const auto *keyPressed = _event.getIf<sf::Event::KeyPressed>()) {
-    if(keyPressed->code == sf::Keyboard::Key::Escape) Renderer::Core::window->close();
-    else if(keyPressed->code == sf::Keyboard::Key::F1) Renderer::Core::ToggleWireframeMode();
-    else if(keyPressed->code == sf::Keyboard::Key::F2) System::ShowMeshNormals = !System::ShowMeshNormals;
-    else if(keyPressed->code == sf::Keyboard::Key::F3) System::ShowLightGizmos = !System::ShowLightGizmos;
-    
-    else if(keyPressed->code == sf::Keyboard::Key::X) {
-      std::stringstream ss;
+void User::HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed) {
+  if(_keyPressed->code == sf::Keyboard::Key::Escape) Renderer::Core::window->close();
 
-      ss << "Delta Time: " << System::deltaTime << '\n' <<
-            "Frames Per Second: " << (1 / System::deltaTime) << '\n';
+  else if(_keyPressed->code == sf::Keyboard::Key::F1) Renderer::Core::ToggleWireframeMode();
+  else if(_keyPressed->code == sf::Keyboard::Key::F2) System::ShowMeshNormals = !System::ShowMeshNormals;
+  else if(_keyPressed->code == sf::Keyboard::Key::F3) System::ShowLightGizmos = !System::ShowLightGizmos;
 
-      std::cout << ss.str();
-    }
+  else if(_keyPressed->code == sf::Keyboard::Key::X) {
+    std::stringstream ss;
+
+    ss << "Delta Time: " << System::deltaTime << '\n' <<
+          "Frames Per Second: " << (1 / System::deltaTime) << '\n';
+
+    std::cout << ss.str();
+  }
+}
+void User::HandleMouseButtonPressed(const sf::Event::MouseButtonPressed *_mouseButtonPressed) {
+  if(_mouseButtonPressed->button == sf::Mouse::Button::Left) {
+    std::cout << "Left Mouse Button Pressed\n";
   }
 }

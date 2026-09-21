@@ -15,7 +15,11 @@ namespace Renderer {
 
     static void RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors);
 
-    static Mesh GenerateNormalLines(const Mesh &_mesh, const glm::vec4 _color);
+    
+    static Mesh GenerateNormalGizmos(const Mesh &_mesh, const glm::vec4 _color);
+
+    static glm::vec3 CalculateFaceNormal(const glm::vec3 _a, const glm::vec3 _b, const glm::vec3 _c);
+    static void CalculateNormals(Mesh &_mesh, bool _useIndices = false);
 
 
     static Mesh GenerateCircle(uint16_t _resolution = 12, float _radius = .5f);

@@ -2,6 +2,7 @@
 #include <User.hpp>
 #include <Renderer.hpp>
 using namespace Renderer;
+#include <UI.hpp>
 
 #include <SFML/Graphics.hpp>
 
@@ -58,16 +59,12 @@ static void init() {
   System::init();
   Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
   User::init();
+  UI::Core::init(Core::window, "Roboto.ttf");
 
   Core::window->setVerticalSyncEnabled(true);
 }
 int main(int argc, char *argv[]) {
   init();
-
-  sf::Font font;
-  if(font.openFromFile(System::PATH+"/assets/Roboto.ttf") == false) {
-    std::cout << "[UI Error]: Font file was not found or could not be opened\n";
-  }
 
 
   Camera *camera = new Camera();
@@ -87,10 +84,17 @@ int main(int argc, char *argv[]) {
   };
   Core::UpdateDynamicLighting();
 
-  Mesh mesh;
-  MeshRenderer meshRenderer = MeshRenderer(nullptr, Core::GetShader("Lit"));
+  Mesh meshA;
+  Mesh meshB;
+  Mesh meshC;
+  MeshRenderer meshRendererA = MeshRenderer(nullptr, Core::GetShader("Lit"));
+  MeshRenderer meshRendererB = MeshRenderer(nullptr, Core::GetShader("Lit"));
+  MeshRenderer meshRendererC = MeshRenderer(nullptr, Core::GetShader("Lit"));
 
-  if constexpr(true) { //Load Camera
+  std::vector<MeshRenderer*> meshes = {&meshRendererA, &meshRendererB, &meshRendererC};
+  std::vector<std::vector<Transform>> meshInstances;
+
+  { //Load Camera
     std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
 
     std::vector<glm::vec3> temp_positions;
@@ -123,8 +127,8 @@ int main(int argc, char *argv[]) {
             int uIndex = std::stoi(subParts[1]) - 1;
             int nIndex = std::stoi(subParts[2]) - 1;
 
-            mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
-            mesh.indices.push_back(mesh.vertices.size() - 1);
+            meshA.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
+            meshA.indices.push_back(meshA.vertices.size() - 1);
           }
         }
 
@@ -133,31 +137,46 @@ int main(int argc, char *argv[]) {
     }
 
     file.close();
-  }
-  if constexpr(false) mesh = MeshHelper::GeneratePlane(glm::vec2(30,30), glm::ivec2(3,3));
-  meshRenderer.setMesh(&mesh);
 
-  std::vector<Transform> meshInstances;
+    meshes[0]->setMesh(&meshA);
+  }
+  { //Load UV Sphere
+    meshB = MeshHelper::GenerateUVSphere(16,16, .5f);
+    meshes[1]->setMesh(&meshB);
+  }
+  { //Load Pyramid
+    // meshC = MeshHelper::GeneratePyramid(4,1, .5f);
+    meshC = MeshHelper::GenerateCylinder();
+    meshes[2]->setMesh(&meshC);
+  }
+
   { //Generate Mesh Instances
-    static constexpr uint64_t SPAWN_COUNT = 100;
+    static constexpr uint64_t SPAWN_COUNT = 500;
     static constexpr float SPAWN_RADIUS = 50;
     static constexpr float ROTATION_RANGE = 180;
     static constexpr float SCALE_RANGE_MIN = .1f;
     static constexpr float SCALE_RANGE_MAX = 2.5f;
-
+    
     std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
     std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
     std::uniform_real_distribution<float> randSpin(-ROTATION_RANGE, ROTATION_RANGE);
     std::uniform_real_distribution<float> randSize(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
 
-    for(int i = 0; i < SPAWN_COUNT; i++) {
-      const glm::vec3 randomPos = {randRadius(gen),randRadius(gen),randRadius(gen)};
-      const glm::quat randomRot = glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(1,0,0));
 
-      meshInstances.push_back(Transform(randomPos, randomRot, glm::vec3(randSize(gen))));
+    const unsigned int meshCount = meshes.size();
+    meshInstances.resize(meshCount);
+    for(int i = 0; i < meshCount; i++) {
+      meshInstances[i].resize(SPAWN_COUNT);
+
+      for(int j = 0; j < SPAWN_COUNT; j++) {
+        const glm::vec3 randomPos = {randRadius(gen),randRadius(gen),randRadius(gen)};
+        const glm::quat randomRot = glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(1,0,0));
+
+        meshInstances[i][j] = Transform(randomPos, randomRot, glm::vec3(randSize(gen)));
+      }
+
+      meshes[i]->updateInstancingData(meshInstances[i]);
     }
-
-    meshRenderer.updateInstancingData(meshInstances);
   }
 
 
@@ -166,8 +185,10 @@ int main(int argc, char *argv[]) {
       const auto &event = *eventOpt;
 
       if(event.is<sf::Event::Closed>()) Core::window->close();
-      else if(event.is<sf::Event::KeyPressed>()) User::HandleEvent(event);
       else if(const auto *resized = event.getIf<sf::Event::Resized>()) Core::UpdateWindowSize();
+
+      else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) User::HandleKeyPressed(keyPressed);
+      else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
     }
 
 
@@ -179,14 +200,17 @@ int main(int argc, char *argv[]) {
       else User::Mouse::update(mouseLockPosition.value());
 
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) { //GPU Instancing Updates
-        for(Transform &_instance : meshInstances) {
-          _instance.position -= glm::normalize(_instance.position) * System::deltaTime * 3.0f;
+        for(int i = 0; i < meshes.size(); i++) {
+          for(Transform &_instance : meshInstances[i]) {
+            _instance.position -= _instance.position * System::deltaTime * .5f;
+          }
+
+          meshes[i]->updateInstancingData(meshInstances[i]);
         }
-        meshRenderer.updateInstancingData(meshInstances);
       }
 
       { //Dynamic Lighting
-        static constexpr float MOVE_RADIUS = 100;
+        static constexpr float MOVE_RADIUS = 75;
 
         static float animationT = 0;
         animationT += System::deltaTime;
@@ -254,14 +278,12 @@ int main(int argc, char *argv[]) {
       Core::clear();
 
       Core::SetState(Renderer::State::OpenGL); {
-        Transform transform;
-        meshRenderer.draw(transform.getMatrix());
-        meshRenderer.drawInstanced();
+        for(const MeshRenderer *renderer : meshes) renderer->drawInstanced();
 
         if(System::ShowMeshNormals) {
-          Mesh normalMesh = MeshHelper::GenerateNormalLines(mesh, {0,0,1,1});
+          Mesh normalMesh = MeshHelper::GenerateNormalGizmos(meshC, {0,0,1,1});
           MeshRenderer normalRenderer(&normalMesh, Core::GetShader("Unlit"));
-          normalRenderer.draw(transform.getMatrix());
+          normalRenderer.draw(glm::mat4x4(1));
         }
         if(System::ShowLightGizmos) {
           Mesh lightMesh = MeshHelper::GenerateUVSphere(8,8,.25f);
@@ -275,30 +297,33 @@ int main(int argc, char *argv[]) {
           }
         }
         if(true) { //Show Transform Gizmos
-          Mesh mesh(MeshType::Lines);
-          mesh.vertices = {
-            Mesh::Vertex{{0,0,0}, {1,0,0,1}},
-            Mesh::Vertex{transform.right(), {1,0,0,1}},
+          // Mesh mesh(MeshType::Lines);
+          // mesh.vertices = {
+          //   Mesh::Vertex{{0,0,0}, {1,0,0,1}},
+          //   Mesh::Vertex{transform.right(), {1,0,0,1}},
 
-            Mesh::Vertex{{0,0,0}, {0,1,0,1}},
-            Mesh::Vertex{transform.up(), {0,1,0,1}},
+          //   Mesh::Vertex{{0,0,0}, {0,1,0,1}},
+          //   Mesh::Vertex{transform.up(), {0,1,0,1}},
 
-            Mesh::Vertex{{0,0,0}, {0,0,1,1}},
-            Mesh::Vertex{transform.forward(), {0,0,1,1}},
-          };
-          mesh.indices = {0,1,2,3,4,5};
+          //   Mesh::Vertex{{0,0,0}, {0,0,1,1}},
+          //   Mesh::Vertex{transform.forward(), {0,0,1,1}},
+          // };
+          // mesh.indices = {0,1,2,3,4,5};
 
-          MeshRenderer transformRenderer(&mesh, Core::GetShader("Unlit"));
-          transformRenderer.draw(transform.getMatrix());
+          // MeshRenderer transformRenderer(&mesh, Core::GetShader("Unlit"));
+          // transformRenderer.draw(transform.getMatrix());
         }
       }
 
-      Core::SetState(Renderer::State::UI); {
+      UI::Core::draw();
+      if constexpr (false) { //Draw Old UI
+        Core::SetState(Renderer::State::UI); 
         const sf::Vector2f size = sf::Vector2f{Core::windowSize.x / 6.0f, static_cast<float>(Core::windowSize.y)};
 
         sf::RectangleShape background(size);
         background.setFillColor(sf::Color(15,15,15));
 
+        sf::Font font;
         sf::Text text(font);
         const uint32_t charSize = 15;
         const uint32_t elementPad = 5;
@@ -353,3 +378,20 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+
+
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
+//TRY OUT COMPUTE SHADERS
