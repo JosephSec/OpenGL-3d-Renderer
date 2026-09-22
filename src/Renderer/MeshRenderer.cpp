@@ -184,6 +184,12 @@ void MeshRenderer::drawInstanced() const {
     glUseProgram(m_shader->program);
     m_shader->SetUniform("uIsInstanced", true);
 
+    m_shader->SetUniform("material.baseColor", material.baseColor);
+    
+    if(m_shader == Core::GetShader("Lit")) {
+      m_shader->SetUniform("material.surface", material.surface);
+    }
+
   } else glUseProgram(0);
 
   glBindVertexArray(m_vao);

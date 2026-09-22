@@ -66,43 +66,37 @@ int main(int argc, char *argv[]) {
   };
   Core::UpdateDynamicLighting();
 
-  Mesh meshA;
-  Mesh meshB;
-  Mesh meshC;
-  Mesh meshD;
-  MeshRenderer meshRendererA = MeshRenderer(nullptr, Core::GetShader("Lit"));
-  MeshRenderer meshRendererB = MeshRenderer(nullptr, Core::GetShader("Lit"));
-  MeshRenderer meshRendererC = MeshRenderer(nullptr, Core::GetShader("Lit"));
-  MeshRenderer meshRendererD = MeshRenderer(nullptr, Core::GetShader("Lit"));
-
-  std::vector<MeshRenderer*> meshes = {&meshRendererA, &meshRendererB, &meshRendererC, &meshRendererD};
+  std::vector<std::pair<Mesh, MeshRenderer>> meshesX;
   std::vector<std::vector<Transform>> meshInstances;
 
-  if(true) { //Load Camera
-    MeshHelper::LoadMeshObj(meshA, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
-    meshes[0]->setMesh(&meshA);
+  if(false) { //Load Camera
+    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
+    MeshHelper::LoadMeshObj(meshesX.back().first, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
+    meshesX.back().second.setMesh(&meshesX.back().first);
   }
   if(true) { //Load Dragon
-    MeshHelper::LoadMeshObj(meshB, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
-    meshes[1]->material = Material{{1,1,1}, {0.0f,.9f}};
-    meshes[1]->setMesh(&meshB);
+    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
+    MeshHelper::LoadMeshObj(meshesX.back().first, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
+    meshesX.back().second.material = Material{{1,1,1}, {0.05f,1.0f}};
+    meshesX.back().second.setMesh(&meshesX.back().first);
   }
-  if(true) { //Load UV Sphere
-    meshC = MeshHelper::GenerateUVSphere(16,16, .5f);
-    meshes[2]->setMesh(&meshC);
+  if(false) { //Load UV Sphere
+    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
+    meshesX.back().first = MeshHelper::GenerateUVSphere();
+    meshesX.back().second.setMesh(&meshesX.back().first);
   }
-  if(true) { //Load Pyramid
-    // meshD = MeshHelper::GeneratePyramid(4,1, .5f);
-    meshD = MeshHelper::GenerateCylinder();
-    meshes[3]->setMesh(&meshD);
+  if(false) { //Load Cylinder
+    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
+    meshesX.back().first = MeshHelper::GenerateCylinder();
+    meshesX.back().second.setMesh(&meshesX.back().first);
   }
 
-  if(true) { //Generate Mesh Instances
-    static constexpr uint64_t SPAWN_COUNT = 5;
-    static constexpr float SPAWN_RADIUS = 20;
+  if(false) { //Generate Mesh Instances
+    static constexpr uint64_t SPAWN_COUNT = 3;
+    static constexpr float SPAWN_RADIUS = 5;
     static constexpr float ROTATION_RANGE = 180;
-    static constexpr float SCALE_RANGE_MIN = .1f;
-    static constexpr float SCALE_RANGE_MAX = 2.5f;
+    static constexpr float SCALE_RANGE_MIN = .2f;
+    static constexpr float SCALE_RANGE_MAX = 1.0f;
     
     std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
     std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
@@ -110,11 +104,9 @@ int main(int argc, char *argv[]) {
     std::uniform_real_distribution<float> randSize(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
 
 
-    const unsigned int meshCount = meshes.size();
-    meshInstances.resize(meshCount);
+    const unsigned int meshCount = meshesX.size();
+    meshInstances = std::vector<std::vector<Transform>>(meshCount, std::vector<Transform>(SPAWN_COUNT));
     for(int i = 0; i < meshCount; i++) {
-      meshInstances[i].resize(SPAWN_COUNT);
-
       for(int j = 0; j < SPAWN_COUNT; j++) {
         const glm::vec3 randomPos = {randRadius(gen),randRadius(gen),randRadius(gen)};
         const glm::quat randomRot = glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(1,0,0));
@@ -122,7 +114,7 @@ int main(int argc, char *argv[]) {
         meshInstances[i][j] = Transform(randomPos, randomRot, glm::vec3(randSize(gen)));
       }
 
-      meshes[i]->updateInstancingData(meshInstances[i]);
+      meshesX[i].second.updateInstancingData(meshInstances[i]);
     }
   }
 
@@ -152,7 +144,7 @@ int main(int argc, char *argv[]) {
             _instance.position -= _instance.position * System::deltaTime * .5f;
           }
 
-          meshes[i]->updateInstancingData(meshInstances[i]);
+          meshesX[i].second.updateInstancingData(meshInstances[i]);
         }
       }
 
@@ -221,19 +213,33 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    if(Core::window->hasFocus() == true) { //Render
+    // if(Core::window->hasFocus() == true) 
+    { //Render
       Core::clear();
 
       Core::SetState(Renderer::State::OpenGL); {
         Mesh mesh = MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
         MeshRenderer meshRenderer = MeshRenderer(&mesh, Core::GetShader("Lit"));
-        meshRenderer.draw(Transform(glm::vec3(0,-5,0)).getMatrix());
+        meshRenderer.draw(Transform(glm::vec3(0,-5,0)));
 
-        for(const MeshRenderer *renderer : meshes) renderer->drawInstanced();
-        meshRendererB.draw(Transform(glm::vec3(0), glm::quat(), glm::vec3(4)).getMatrix());
+        for(const auto &[mesh, renderer] : meshesX) renderer.drawInstanced();
 
-        if(System::ShowMeshNormals) {
-          Mesh normalMesh = MeshHelper::GenerateNormalGizmos(meshC, {0,0,1,1});
+        if(true && meshesX.empty() == false) { //Material Types
+          meshesX[0].second.material = Material{{1,1,1}, {.1f,.9f}};
+          meshesX[0].second.draw(Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(6)));
+
+          // meshesX[0].second.material = Material{{1,1,1}, {.1f,1}};
+          // meshesX[0].second.draw(Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(.75f)));
+          
+          // meshesX[0].second.material = Material{{1,1,1}, {.5f,.5f}};
+          // meshesX[0].second.draw(Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(.75f)));
+
+          // meshesX[0].second.material = Material{{1,1,1}, {1,.1f}};
+          // meshesX[0].second.draw(Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(.75f)));
+        }
+
+        if(System::ShowMeshNormals && meshesX.empty() == false) {
+          Mesh normalMesh = MeshHelper::GenerateNormalGizmos(meshesX[0].first, {0,0,1,1});
           MeshRenderer normalRenderer(&normalMesh, Core::GetShader("Unlit"));
           normalRenderer.draw(glm::mat4x4(1));
         }
