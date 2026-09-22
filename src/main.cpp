@@ -15,24 +15,6 @@ using namespace Renderer;
 #include <glm/gtx/euler_angles.hpp>
 
 
-static std::vector<std::string> split_string(const std::string &_str, char _ch) {
-  std::vector<std::string> tokens;
-
-  std::string buffer;
-  for(const char &ch : _str) {
-    if(ch == _ch && buffer.empty() == false) {
-      tokens.push_back(buffer);
-      buffer.clear();
-      continue;
-    }
-
-    buffer.push_back(ch);
-  }
-
-  if(buffer.empty() == false) tokens.push_back(buffer);
-
-  return tokens;
-}
 static std::string BoolString(const std::string &_str, bool _val) {
   return _str + ": " + std::string(_val? "True" : "False");
 }
@@ -75,84 +57,49 @@ int main(int argc, char *argv[]) {
 
   Core::ambientLight = {.1,.1,.1, .1};
   Core::lights = {
-    Light{{0,0,0}, {1,0,0}, 100.0f, 1.0f},
-    Light{{0,0,0}, {0,1,0}, 100.0f, 1.0f},
-    Light{{0,0,0}, {0,0,1}, 100.0f, 1.0f},
-    Light{{0,0,0}, {1,1,0}, 100.0f, 1.0f},
-    Light{{0,0,0}, {1,0,1}, 100.0f, 1.0f},
-    Light{{0,0,0}, {0,1,1}, 100.0f, 1.0f},
+    Light{{0,0,0}, {1,0,0}, 15.0f, 1.0f},
+    Light{{0,0,0}, {0,1,0}, 15.0f, 1.0f},
+    Light{{0,0,0}, {0,0,1}, 15.0f, 1.0f},
+    Light{{0,0,0}, {1,1,0}, 15.0f, 1.0f},
+    Light{{0,0,0}, {1,0,1}, 15.0f, 1.0f},
+    Light{{0,0,0}, {0,1,1}, 15.0f, 1.0f},
   };
   Core::UpdateDynamicLighting();
 
   Mesh meshA;
   Mesh meshB;
   Mesh meshC;
+  Mesh meshD;
   MeshRenderer meshRendererA = MeshRenderer(nullptr, Core::GetShader("Lit"));
   MeshRenderer meshRendererB = MeshRenderer(nullptr, Core::GetShader("Lit"));
   MeshRenderer meshRendererC = MeshRenderer(nullptr, Core::GetShader("Lit"));
+  MeshRenderer meshRendererD = MeshRenderer(nullptr, Core::GetShader("Lit"));
 
-  std::vector<MeshRenderer*> meshes = {&meshRendererA, &meshRendererB, &meshRendererC};
+  std::vector<MeshRenderer*> meshes = {&meshRendererA, &meshRendererB, &meshRendererC, &meshRendererD};
   std::vector<std::vector<Transform>> meshInstances;
 
-  { //Load Camera
-    std::ifstream file(System::PATH+"/assets/meshes/camera.obj");
-
-    std::vector<glm::vec3> temp_positions;
-    std::vector<glm::vec3> temp_normals;
-
-    std::string str;
-    while(std::getline(file, str)) {
-      const uint32_t strSize = str.size();
-
-      for(int i = 0; i < strSize; i++) {
-        char &ch = str[i];
-        if(ch != ' ') continue;
-
-        const std::string prefix = str.substr(0,i);
-        if(prefix == "v") {
-          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
-          temp_positions.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
-        }
-        else if(prefix == "vn") {
-          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
-          temp_normals.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
-        }
-        else if(prefix == "f") {
-          const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
-
-          for(const std::string &part : parts) {
-            const std::vector<std::string> subParts = split_string(part, '/');
-
-            int vIndex = std::stoi(subParts[0]) - 1;
-            int uIndex = std::stoi(subParts[1]) - 1;
-            int nIndex = std::stoi(subParts[2]) - 1;
-
-            meshA.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
-            meshA.indices.push_back(meshA.vertices.size() - 1);
-          }
-        }
-
-        break;
-      }
-    }
-
-    file.close();
-
+  if(true) { //Load Camera
+    MeshHelper::LoadMeshObj(meshA, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
     meshes[0]->setMesh(&meshA);
   }
-  { //Load UV Sphere
-    meshB = MeshHelper::GenerateUVSphere(16,16, .5f);
+  if(true) { //Load Dragon
+    MeshHelper::LoadMeshObj(meshB, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
+    meshes[1]->material = Material{{1,1,1}, {0.0f,.9f}};
     meshes[1]->setMesh(&meshB);
   }
-  { //Load Pyramid
-    // meshC = MeshHelper::GeneratePyramid(4,1, .5f);
-    meshC = MeshHelper::GenerateCylinder();
+  if(true) { //Load UV Sphere
+    meshC = MeshHelper::GenerateUVSphere(16,16, .5f);
     meshes[2]->setMesh(&meshC);
   }
+  if(true) { //Load Pyramid
+    // meshD = MeshHelper::GeneratePyramid(4,1, .5f);
+    meshD = MeshHelper::GenerateCylinder();
+    meshes[3]->setMesh(&meshD);
+  }
 
-  { //Generate Mesh Instances
-    static constexpr uint64_t SPAWN_COUNT = 500;
-    static constexpr float SPAWN_RADIUS = 50;
+  if(true) { //Generate Mesh Instances
+    static constexpr uint64_t SPAWN_COUNT = 5;
+    static constexpr float SPAWN_RADIUS = 20;
     static constexpr float ROTATION_RANGE = 180;
     static constexpr float SCALE_RANGE_MIN = .1f;
     static constexpr float SCALE_RANGE_MAX = 2.5f;
@@ -200,7 +147,7 @@ int main(int argc, char *argv[]) {
       else User::Mouse::update(mouseLockPosition.value());
 
       if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) { //GPU Instancing Updates
-        for(int i = 0; i < meshes.size(); i++) {
+        for(int i = 0; i < meshInstances.size(); i++) {
           for(Transform &_instance : meshInstances[i]) {
             _instance.position -= _instance.position * System::deltaTime * .5f;
           }
@@ -210,7 +157,7 @@ int main(int argc, char *argv[]) {
       }
 
       { //Dynamic Lighting
-        static constexpr float MOVE_RADIUS = 75;
+        static constexpr float MOVE_RADIUS = 5;
 
         static float animationT = 0;
         animationT += System::deltaTime;
@@ -274,11 +221,16 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    { //Render
+    if(Core::window->hasFocus() == true) { //Render
       Core::clear();
 
       Core::SetState(Renderer::State::OpenGL); {
+        Mesh mesh = MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
+        MeshRenderer meshRenderer = MeshRenderer(&mesh, Core::GetShader("Lit"));
+        meshRenderer.draw(Transform(glm::vec3(0,-5,0)).getMatrix());
+
         for(const MeshRenderer *renderer : meshes) renderer->drawInstanced();
+        meshRendererB.draw(Transform(glm::vec3(0), glm::quat(), glm::vec3(4)).getMatrix());
 
         if(System::ShowMeshNormals) {
           Mesh normalMesh = MeshHelper::GenerateNormalGizmos(meshC, {0,0,1,1});

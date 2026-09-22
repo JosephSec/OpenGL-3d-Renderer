@@ -9,9 +9,11 @@
 
 
 namespace Renderer {
-  //see if theres benefits to switching the buffer data type to dynamic in updateMeshData
-  //has any benefits. the thought being that, if updateMeshData is never called the mesh
-  //is probably static. after updateMeshData is called, the mesh is likely dynamic
+  struct HORDE3D_API Material {
+  public:
+    glm::vec3 baseColor = {1,1,1};
+    glm::vec2 surface = {.5f,.1f}; //x: roughness | y: metallic
+  };
 
   class HORDE3D_API MeshRenderer {
   public:
@@ -29,7 +31,9 @@ namespace Renderer {
     void clearInstancingData();
 
     void draw(const glm::mat4x4 &_matrix) const;
-    inline void draw(const Transform &_transform) const;
+    inline void draw(const Transform &_transform) const {
+      draw(_transform.getMatrix());
+    }
     void drawInstanced() const;
 
     void setMesh(Mesh *_mesh);
@@ -37,6 +41,7 @@ namespace Renderer {
 
 
     bool backFaceCulling = true;
+    Material material;
 
   private:
     GLuint m_vao, m_vbo, m_ebo, m_instanceVbo;

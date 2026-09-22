@@ -13,6 +13,9 @@ namespace Renderer {
     static bool SaveMesh(const Mesh &_mesh, const std::filesystem::path &_path);
     static bool LoadMesh(Mesh &_mesh, const std::filesystem::path &_path);
 
+    static bool LoadMeshObj(Mesh &_mesh, const std::filesystem::path &_path);
+
+
     static void RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors);
 
     

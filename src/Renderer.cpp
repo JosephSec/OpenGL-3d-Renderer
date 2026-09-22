@@ -77,6 +77,10 @@ void Core::UpdateViewMatrix() {
     glUseProgram(shader);
     shader.SetUniform("uView", viewMatrix);
   }
+
+  Shader* litShader = Core::GetShader("Lit");
+  SetShader(litShader->program);
+  litShader->SetUniform("viewPoint", camera->transform.position);
   glUseProgram(0);
 }
 void Core::UpdateProjectionMatrix() {
@@ -110,10 +114,11 @@ void Core::UpdateDynamicLighting() {
 
   if(lightCount != 0) {
     for(int i = 0; i < lightCount; i++) {
+      const Light &light = lights[i];
+
       const std::string prefix = "lights[" + std::to_string(i) + "].";
-      LitShader.SetUniform(prefix+"position", lights[i].position);
-      LitShader.SetUniform(prefix+"color", lights[i].color);
-      LitShader.SetUniform(prefix+"radius", lights[i].radius);
+      LitShader.SetUniform(prefix+"position", glm::vec4(light.position, light.radius));
+      LitShader.SetUniform(prefix+"color", glm::vec4(light.color, light.strength));
     }
   }
 

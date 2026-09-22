@@ -9,6 +9,27 @@ using namespace Renderer;
 #include <iostream>
 
 
+static std::vector<std::string> split_string(const std::string &_str, char _ch) {
+  std::vector<std::string> tokens;
+
+  std::string buffer;
+  for(const char &ch : _str) {
+    if(ch == _ch && buffer.empty() == false) {
+      tokens.push_back(buffer);
+      buffer.clear();
+      continue;
+    }
+
+    buffer.push_back(ch);
+  }
+
+  if(buffer.empty() == false) tokens.push_back(buffer);
+
+  return tokens;
+}
+
+
+
 bool MeshHelper::SaveMesh(const Mesh &_mesh, const std::filesystem::path &_path) {
   if(std::filesystem::exists(_path.parent_path()) == false) {
     std::filesystem::create_directories(_path.parent_path());
@@ -16,7 +37,7 @@ bool MeshHelper::SaveMesh(const Mesh &_mesh, const std::filesystem::path &_path)
 
   std::ofstream file(_path, std::ios::binary);
   if(!file.is_open()) {
-    std::cout << "[Editor Error]: Failed to open file for writing: " << _path.string() << '\n';
+    std::cout << "[MESH HELPER ERROR]: Failed to open file for writing: " << _path.string() << '\n';
     return false;
   }
 
@@ -34,13 +55,13 @@ bool MeshHelper::SaveMesh(const Mesh &_mesh, const std::filesystem::path &_path)
 }
 bool MeshHelper::LoadMesh(Mesh &_mesh, const std::filesystem::path &_path) {
   if(std::filesystem::exists(_path) == false) {
-    std::cout << "[Editor Error]: File does not exist: " << _path.string() << '\n';
+    std::cout << "[MESH HELPER ERROR]: File does not exist: " << _path.string() << '\n';
     return false;
   }
 
   std::ifstream file(_path, std::ios::binary);
-  if(!file.is_open()) {
-    std::cout << "[Editor Error]: Failed to open file for reading: " << _path.string() << '\n';
+  if(file.is_open() == false) {
+    std::cout << "[MESH HELPER ERROR]: Failed to open file for reading: " << _path.string() << '\n';
     return false;
   }
 
@@ -58,6 +79,62 @@ bool MeshHelper::LoadMesh(Mesh &_mesh, const std::filesystem::path &_path) {
   file.close();
   return true;
 }
+
+bool MeshHelper::LoadMeshObj(Mesh &_mesh, const std::filesystem::path &_path) {
+  if(std::filesystem::exists(_path) == false) {
+    std::cout << "[MESH HELPER ERROR]: File does not exist: " << _path.string() << '\n';
+    return false;
+  }
+
+  std::ifstream file(_path);
+  if(file.is_open() == false) {
+    std::cout << "[MESH HELPER ERROR]: Failed to open file for reading: " << _path.string() << '\n';
+    return false;
+  }
+
+  std::vector<glm::vec3> temp_positions;
+  std::vector<glm::vec3> temp_normals;
+
+  std::string str;
+  while(std::getline(file, str)) {
+    const uint32_t strSize = str.size();
+
+    for(int i = 0; i < strSize; i++) {
+      char &ch = str[i];
+      if(ch != ' ') continue;
+
+      const std::string prefix = str.substr(0,i);
+      if(prefix == "v") {
+        const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+        temp_positions.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
+      }
+      else if(prefix == "vn") {
+        const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+        temp_normals.push_back({std::stof(parts[0]),std::stof(parts[1]),std::stof(parts[2])});
+      }
+      else if(prefix == "f") {
+        const std::vector<std::string> parts = split_string(str.substr(i + 1), ' ');
+
+        for(const std::string &part : parts) {
+          const std::vector<std::string> subParts = split_string(part, '/');
+
+          int vIndex = std::stoi(subParts[0]) - 1;
+          int uIndex = std::stoi(subParts[1]) - 1;
+          int nIndex = std::stoi(subParts[2]) - 1;
+
+          _mesh.vertices.push_back(Mesh::Vertex{temp_positions[vIndex], {1,1,1,1}, -temp_normals[nIndex]});
+          _mesh.indices.push_back(_mesh.vertices.size() - 1);
+        }
+      }
+
+      break;
+    }
+  }
+
+  file.close();
+  return true;
+}
+
 
 void MeshHelper::RandomizeMeshColors(Mesh &_mesh, const std::vector<glm::vec4> &_colors) {
   const uint32_t vertexCount = _mesh.vertices.size();

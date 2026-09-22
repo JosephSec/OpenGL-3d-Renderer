@@ -17,7 +17,7 @@ void SmoothRect::draw() const {
   Renderer::Core::SetShader(Core::smoothRectShader);
   Core::smoothRectShader.SetUniform("rect", glm::vec4(position.x,position.y, size.x,size.y));
   Core::smoothRectShader.SetUniform("radius", radius);
-  Core::smoothRectShader.SetUniform("color", glm::vec4(.05,.05,.05, 1));
+  Core::smoothRectShader.SetUniform("color", color);
 
   Renderer::Core::window->draw(shape);
   Renderer::Core::SetShader(0);
@@ -47,17 +47,26 @@ void Core::update() {}
 void Core::draw() {
   Renderer::Core::SetState(Renderer::State::UI);
 
-
   Renderer::Core::SetShader(smoothRectShader);
   smoothRectShader.SetUniform("windowSize", glm::vec2(Renderer::Core::windowSize));
+
 
   SmoothRect hierarchyArea = SmoothRect({{0,0}, sf::Vector2f{300,static_cast<float>(Renderer::Core::windowSize.y)}}, 15, {.05,.05,.05, 1});
   hierarchyArea.draw();
 
-
   sf::Text text(m_font);
-  text.setString("Hierarchy");
-  text.setPosition(sf::Vector2f{10,5});
-  text.setCharacterSize(15);
-  m_window->draw(text);
+
+  { //Hierarchy Button
+    SmoothRect textArea = SmoothRect({{10,10}, {75,25}}, 5, {.3,.3,.3,1});
+    textArea.draw();
+
+    text.setString("Hierarchy");
+    text.setCharacterSize(15);
+    text.setPosition(sf::Vector2f{15,15 - text.getLocalBounds().position.y});
+    m_window->draw(text);
+  }
+  
+  const sf::Vector2f start = {10, 10 + 25 + 10};
+  SmoothRect listArea = SmoothRect({start, sf::Vector2f{300 - start.x * 2,static_cast<float>(Renderer::Core::windowSize.y) - start.y - 10}}, 15, {.1,.1,.1, 1});
+  listArea.draw();
 }

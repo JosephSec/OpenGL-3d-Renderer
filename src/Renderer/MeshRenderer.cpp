@@ -1,6 +1,8 @@
 #include <Renderer/MeshRenderer.hpp>
 using namespace Renderer;
 
+#include <Renderer.hpp>
+
 #include <iostream>
 
 
@@ -87,10 +89,10 @@ void MeshRenderer::updateMeshData() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
 
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glBufferData(GL_ARRAY_BUFFER, m_mesh->vertices.size() * Mesh::VERTEX_SIZE, m_mesh->vertices.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, m_mesh->vertices.size() * Mesh::VERTEX_SIZE, m_mesh->vertices.data(), GL_DYNAMIC_DRAW);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_mesh->indices.size() * sizeof(unsigned int), m_mesh->indices.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_mesh->indices.size() * sizeof(unsigned int), m_mesh->indices.data(), GL_DYNAMIC_DRAW);
 
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -148,6 +150,12 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
     glUseProgram(m_shader->program);
     m_shader->SetUniform("uModel", _matrix);
     m_shader->SetUniform("uIsInstanced", false);
+
+    m_shader->SetUniform("material.baseColor", material.baseColor);
+    
+    if(m_shader == Core::GetShader("Lit")) {
+      m_shader->SetUniform("material.surface", material.surface);
+    }
     
   } else glUseProgram(0);
 
@@ -166,9 +174,6 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
   glDrawElements(drawType, m_mesh->indices.size(), GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
   glUseProgram(0);
-}
-inline void MeshRenderer::draw(const Transform &_transform) const {
-  draw(_transform.getMatrix());
 }
 void MeshRenderer::drawInstanced() const {
   if(m_mesh == nullptr) return;
