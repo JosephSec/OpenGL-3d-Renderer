@@ -5,7 +5,7 @@
 
 #include <SFML/System/Time.hpp>
 
-#include <Renderer/Shader.hpp>
+#include <Renderer/Core.hpp>
 
 
 std::string System::PATH;
@@ -15,6 +15,7 @@ float System::deltaTime;
 
 bool System::ShowMeshNormals = false;
 bool System::ShowLightGizmos = true;
+bool System::ShowParticleGizmos = true;
 
 
 void System::init() {
@@ -26,4 +27,5 @@ void System::init() {
 }
 void System::update() {
   deltaTime = timeClock.restart().asSeconds();
+  Renderer::Core::deltaTime = deltaTime;
 }

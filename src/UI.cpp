@@ -3,7 +3,7 @@ using namespace UI;
 
 #include <System.hpp>
 
-#include <Renderer.hpp>
+#include <Renderer/Core.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Text.hpp>
 
@@ -65,8 +65,10 @@ void Core::draw() {
     text.setPosition(sf::Vector2f{15,15 - text.getLocalBounds().position.y});
     m_window->draw(text);
   }
-  
-  const sf::Vector2f start = {10, 10 + 25 + 10};
-  SmoothRect listArea = SmoothRect({start, sf::Vector2f{300 - start.x * 2,static_cast<float>(Renderer::Core::windowSize.y) - start.y - 10}}, 15, {.1,.1,.1, 1});
-  listArea.draw();
+
+  { //List
+    const sf::Vector2f start = {10, 10 + 25 + 10};
+    SmoothRect listArea = SmoothRect({start, sf::Vector2f{300 - start.x * 2,static_cast<float>(Renderer::Core::windowSize.y) - start.y - 10}}, 15, {.1,.1,.1, 1});
+    listArea.draw();
+  }
 }

@@ -10,6 +10,7 @@ layout (location = 6) in vec4 aModel3;
 layout (location = 7) in vec4 aModel4;
 
 out vec4 vColor;
+out vec2 vUV;
 
 uniform mat4 uProjection;
 uniform mat4 uView;
@@ -22,6 +23,7 @@ void main() {
   if(uIsInstanced) model = mat4(aModel1,aModel2,aModel3,aModel4);
   
   vColor = aColor;
+  vUV = aUV;
 
   gl_Position = uProjection * uView * model * vec4(aPos, 1.0);
 }

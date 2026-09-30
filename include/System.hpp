@@ -14,6 +14,7 @@ public:
 
   static bool ShowMeshNormals;
   static bool ShowLightGizmos;
+  static bool ShowParticleGizmos;
 
 
   static void init();

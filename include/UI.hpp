@@ -4,7 +4,7 @@
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Rect.hpp>
 
-#include <Renderer/Shader.hpp>
+#include <Renderer/Core/Shader.hpp>
 
 
 namespace UI {

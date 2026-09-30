@@ -2,6 +2,7 @@
 in vec3 vNormal;
 in vec4 vColor;
 in vec3 vPos;
+in vec2 vUV;
 
 out vec4 FragColor;
 
@@ -11,6 +12,9 @@ struct Light {
   vec4 color;    // rgb: xyz | strength: w
 };
 struct Material {
+  sampler2D diffuseTex;
+  bool useDiffuseTex;
+
   vec3 baseColor;
   vec2 surface;
 };
@@ -59,6 +63,8 @@ void main() {
   float metallic = material.surface.y;
 
   vec3 normal = normalize(vNormal);
+  if(gl_FrontFacing == false) normal = -normal;
+
   vec3 totalLight = CalculateAmbient() * albedo;
 
   for(int i = 0; i < lightCount; i++) {
@@ -75,5 +81,8 @@ void main() {
     totalLight += (diffuse + specular) * lights[i].color.w;
   }
 
-  FragColor = vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
+  vec4 texColor = vec4(1);
+  if(material.useDiffuseTex) texColor = texture(material.diffuseTex, vUV);
+
+  FragColor = texColor * vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
 }

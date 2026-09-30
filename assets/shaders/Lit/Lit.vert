@@ -13,6 +13,7 @@ layout (location = 7) in vec4 aModel4;
 out vec3 vNormal;
 out vec4 vColor;
 out vec3 vPos;
+out vec2 vUV;
 
 uniform mat4 uProjection;
 uniform mat4 uView;
@@ -28,6 +29,7 @@ void main() {
   vPos = worldPos.xyz;
   vNormal = normalize(mat3(transpose(inverse(model))) * aNormal);
   vColor = aColor;
+  vUV = aUV;
 
   gl_Position = uProjection * uView * worldPos;
 }

@@ -1,8 +1,10 @@
 #include <System.hpp>
 #include <User.hpp>
-#include <Renderer.hpp>
-using namespace Renderer;
+#include <EditorCamera.hpp>
+#include <TestScene.hpp>
 #include <UI.hpp>
+
+#include <Renderer/Core.hpp>
 
 #include <SFML/Graphics.hpp>
 
@@ -39,300 +41,118 @@ static std::string Vec3String(const glm::vec3 _val, int _precision = 2) {
 
 static void init() {
   System::init();
-  Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
-  User::init();
-  UI::Core::init(Core::window, "Roboto.ttf");
 
-  Core::window->setVerticalSyncEnabled(true);
+  Renderer::Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
+  Renderer::Core::window->setVerticalSyncEnabled(true);
+
+  User::init();
+  EditorCamera::init();
+  TestScene::init();
+  UI::Core::init(Renderer::Core::window, "Roboto.ttf");
 }
 int main(int argc, char *argv[]) {
   init();
 
+  { //Generate Particle Texture
+    sf::Image image(sf::Vector2u(50,50));
 
-  Camera *camera = new Camera();
-  camera->fov = 90;
-  camera->transform.position = glm::vec3(2.5,2,-4.5);
-  camera->transform.rotation = glm::angleAxis(glm::radians<float>(145), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(-30), glm::vec3(1,0,0));
-  Core::SetCamera(camera);
+    for(int x = 0; x < image.getSize().x; x++) {
+      for(int y = 0; y < image.getSize().y; y++) {
+        const float alpha = std::max<float>(0, 1 - glm::length(glm::vec2(x - 25,y - 25)) / 25.0f);
 
-  Core::ambientLight = {.1,.1,.1, .1};
-  Core::lights = {
-    Light{{0,0,0}, {1,0,0}, 15.0f, 1.0f},
-    Light{{0,0,0}, {0,1,0}, 15.0f, 1.0f},
-    Light{{0,0,0}, {0,0,1}, 15.0f, 1.0f},
-    Light{{0,0,0}, {1,1,0}, 15.0f, 1.0f},
-    Light{{0,0,0}, {1,0,1}, 15.0f, 1.0f},
-    Light{{0,0,0}, {0,1,1}, 15.0f, 1.0f},
-  };
-  Core::UpdateDynamicLighting();
-
-  std::vector<std::pair<Mesh, MeshRenderer>> meshesX;
-  std::vector<std::vector<Transform>> meshInstances;
-
-  if(false) { //Load Camera
-    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
-    MeshHelper::LoadMeshObj(meshesX.back().first, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
-    meshesX.back().second.setMesh(&meshesX.back().first);
-  }
-  if(true) { //Load Dragon
-    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
-    MeshHelper::LoadMeshObj(meshesX.back().first, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
-    meshesX.back().second.material = Material{{1,1,1}, {0.05f,1.0f}};
-    meshesX.back().second.setMesh(&meshesX.back().first);
-  }
-  if(false) { //Load UV Sphere
-    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
-    meshesX.back().first = MeshHelper::GenerateUVSphere();
-    meshesX.back().second.setMesh(&meshesX.back().first);
-  }
-  if(false) { //Load Cylinder
-    meshesX.push_back({Mesh(), MeshRenderer(nullptr, Core::GetShader("Lit"))});
-    meshesX.back().first = MeshHelper::GenerateCylinder();
-    meshesX.back().second.setMesh(&meshesX.back().first);
-  }
-
-  if(false) { //Generate Mesh Instances
-    static constexpr uint64_t SPAWN_COUNT = 3;
-    static constexpr float SPAWN_RADIUS = 5;
-    static constexpr float ROTATION_RANGE = 180;
-    static constexpr float SCALE_RANGE_MIN = .2f;
-    static constexpr float SCALE_RANGE_MAX = 1.0f;
-    
-    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
-    std::uniform_real_distribution<float> randRadius(-SPAWN_RADIUS, SPAWN_RADIUS);
-    std::uniform_real_distribution<float> randSpin(-ROTATION_RANGE, ROTATION_RANGE);
-    std::uniform_real_distribution<float> randSize(SCALE_RANGE_MIN, SCALE_RANGE_MAX);
-
-
-    const unsigned int meshCount = meshesX.size();
-    meshInstances = std::vector<std::vector<Transform>>(meshCount, std::vector<Transform>(SPAWN_COUNT));
-    for(int i = 0; i < meshCount; i++) {
-      for(int j = 0; j < SPAWN_COUNT; j++) {
-        const glm::vec3 randomPos = {randRadius(gen),randRadius(gen),randRadius(gen)};
-        const glm::quat randomRot = glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(0,1,0)) * glm::angleAxis(glm::radians<float>(randSpin(gen)), glm::vec3(1,0,0));
-
-        meshInstances[i][j] = Transform(randomPos, randomRot, glm::vec3(randSize(gen)));
-      }
-
-      meshesX[i].second.updateInstancingData(meshInstances[i]);
+        image.setPixel(sf::Vector2u{x,y}, sf::Color{255,255,255, alpha * 255});
+      }      
     }
+
+    image.saveToFile(System::PATH+"/assets/textures/particle.png");
   }
 
 
-  while(Core::window->isOpen()) {
-    while(const auto &eventOpt = Core::window->pollEvent()) {
+  while(Renderer::Core::window->isOpen()) {
+    while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
 
-      if(event.is<sf::Event::Closed>()) Core::window->close();
-      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Core::UpdateWindowSize();
+      if(event.is<sf::Event::Closed>()) Renderer::Core::window->close();
+      else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::Core::UpdateWindowSize();
+      else if(event.is<sf::Event::FocusLost>()) User::HandleFocusLost();
 
       else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) User::HandleKeyPressed(keyPressed);
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
+      else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
     }
 
 
     { //Update
-      static std::optional<glm::ivec2> mouseLockPosition;
-
       System::update();
-      if(mouseLockPosition.has_value() == false) User::Mouse::update();
-      else User::Mouse::update(mouseLockPosition.value());
-
-      if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) { //GPU Instancing Updates
-        for(int i = 0; i < meshInstances.size(); i++) {
-          for(Transform &_instance : meshInstances[i]) {
-            _instance.position -= _instance.position * System::deltaTime * .5f;
-          }
-
-          meshesX[i].second.updateInstancingData(meshInstances[i]);
-        }
-      }
-
-      { //Dynamic Lighting
-        static constexpr float MOVE_RADIUS = 5;
-
-        static float animationT = 0;
-        animationT += System::deltaTime;
-        const float c = glm::cos(animationT);
-        const float s = glm::sin(animationT);
-
-        const std::vector<glm::vec3> points = {
-          glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
-          glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
-          glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
-          -glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
-          -glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
-          -glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
-        };
-        for(int i = 0; i < Core::lights.size(); i++) Core::lights[i].position = points[i];
-
-        Core::UpdateDynamicLighting();
-      } //Dynamic Lighting
-
-      if(Core::window->hasFocus() == true) { //Camera Movement
-        static constexpr float sensitivity = 1;
-        static constexpr float slowModeSpeed = 10;
-        static constexpr float fastModeSpeed = 20;
-
-        if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-          mouseLockPosition = Core::windowSize / 2;
-
-          glm::vec3 moveDir = glm::vec3(0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
-          if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
-          if(glm::length(moveDir) != 0) {
-            const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
-            camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
-          }
-
-          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-            const glm::vec2 lookDelta = -glm::vec2(User::Mouse::delta) * sensitivity * System::deltaTime;
-
-            const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
-            const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-            camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
-          }
-
-          Core::UpdateViewMatrix();
-        }
-        else if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle)) {
-          mouseLockPosition = Core::windowSize / 2;
-
-          if(glm::length(glm::vec2(User::Mouse::delta)) != 0) {
-            const glm::vec2 lookDelta = glm::vec2(User::Mouse::delta.x, -User::Mouse::delta.y) * sensitivity * System::deltaTime;
-            camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
-
-            Core::UpdateViewMatrix();
-          }      
-        }
-        else mouseLockPosition = std::nullopt;
-      }
+      User::Cursor::update();
+      EditorCamera::update();
+      TestScene::update();
     }
 
-    // if(Core::window->hasFocus() == true) 
     { //Render
-      Core::clear();
+      Renderer::Core::clear();
 
-      Core::SetState(Renderer::State::OpenGL); {
-        Mesh mesh = MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
-        MeshRenderer meshRenderer = MeshRenderer(&mesh, Core::GetShader("Lit"));
-        meshRenderer.draw(Transform(glm::vec3(0,-5,0)));
-
-        for(const auto &[mesh, renderer] : meshesX) renderer.drawInstanced();
-
-        if(true && meshesX.empty() == false) { //Material Types
-          meshesX[0].second.material = Material{{1,1,1}, {.1f,.9f}};
-          meshesX[0].second.draw(Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(6)));
-
-          // meshesX[0].second.material = Material{{1,1,1}, {.1f,1}};
-          // meshesX[0].second.draw(Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(.75f)));
-          
-          // meshesX[0].second.material = Material{{1,1,1}, {.5f,.5f}};
-          // meshesX[0].second.draw(Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(.75f)));
-
-          // meshesX[0].second.material = Material{{1,1,1}, {1,.1f}};
-          // meshesX[0].second.draw(Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(.75f)));
-        }
-
-        if(System::ShowMeshNormals && meshesX.empty() == false) {
-          Mesh normalMesh = MeshHelper::GenerateNormalGizmos(meshesX[0].first, {0,0,1,1});
-          MeshRenderer normalRenderer(&normalMesh, Core::GetShader("Unlit"));
+      Renderer::Core::SetState(Renderer::State::OpenGL); {
+        if(System::ShowMeshNormals && TestScene::meshes.empty() == false) {
+          Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmos(TestScene::meshes[0].first, {0,0,1,1});
+          Renderer::MeshRenderer normalRenderer(&normalMesh, Renderer::Core::GetShader("Unlit"));
           normalRenderer.draw(glm::mat4x4(1));
         }
         if(System::ShowLightGizmos) {
-          Mesh lightMesh = MeshHelper::GenerateUVSphere(8,8,.25f);
-          MeshRenderer lightRenderer(&lightMesh, Core::GetShader("Unlit"));
+          Renderer::Mesh lightMesh = Renderer::MeshHelper::GenerateUVSphere(8,8,.25f);
+          Renderer::MeshRenderer lightRenderer(&lightMesh, Renderer::Core::GetShader("Unlit"));
           lightRenderer.backFaceCulling = false;
 
-          for(const Light &light : Core::lights) {
-            MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
+          for(const Renderer::Light &light : Renderer::Core::lights) {
+            Renderer::MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
             lightRenderer.updateMeshData();
-            lightRenderer.draw(Transform(light.position).getMatrix());
+            lightRenderer.draw(Renderer::Transform(light.position).getMatrix());
           }
         }
-        if(true) { //Show Transform Gizmos
-          // Mesh mesh(MeshType::Lines);
-          // mesh.vertices = {
-          //   Mesh::Vertex{{0,0,0}, {1,0,0,1}},
-          //   Mesh::Vertex{transform.right(), {1,0,0,1}},
+        if(System::ShowParticleGizmos) {
+          { //Particle Transforms
+            Renderer::Mesh mesh(Renderer::MeshType::Lines);
+            mesh.vertices = {
+              Renderer::Mesh::Vertex{{0,0,0}, {1,0,0,1}},
+              Renderer::Mesh::Vertex{{0,0,0}, {1,0,0,1}},
 
-          //   Mesh::Vertex{{0,0,0}, {0,1,0,1}},
-          //   Mesh::Vertex{transform.up(), {0,1,0,1}},
+              Renderer::Mesh::Vertex{{0,0,0}, {0,1,0,1}},
+              Renderer::Mesh::Vertex{{0,0,0}, {0,1,0,1}},
 
-          //   Mesh::Vertex{{0,0,0}, {0,0,1,1}},
-          //   Mesh::Vertex{transform.forward(), {0,0,1,1}},
-          // };
-          // mesh.indices = {0,1,2,3,4,5};
+              Renderer::Mesh::Vertex{{0,0,0}, {0,0,1,1}},
+              Renderer::Mesh::Vertex{{0,0,0}, {0,0,1,1}},
+            };
+            mesh.indices = {0,1,2,3,4,5};
+            Renderer::MeshRenderer transformRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
 
-          // MeshRenderer transformRenderer(&mesh, Core::GetShader("Unlit"));
-          // transformRenderer.draw(transform.getMatrix());
+            for(const Renderer::Transform &transform : TestScene::particleEffect.getInstancingData()) {
+            mesh.vertices[1] = Renderer::Mesh::Vertex{transform.right(),   {1,0,0,1}};
+            mesh.vertices[3] = Renderer::Mesh::Vertex{transform.up(),      {0,1,0,1}};
+            mesh.vertices[5] = Renderer::Mesh::Vertex{transform.forward(), {0,0,1,1}};
+
+            transformRenderer.updateMeshData();
+            transformRenderer.draw(Renderer::Transform(transform.position, glm::quat(), glm::vec3(1)));
+          }
+          } //Particle Transforms
+          { //Particle Bounds
+            Renderer::Mesh mesh = Renderer::MeshHelper::GenerateWireCube();
+            Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
+
+            Renderer::Transform transform = TestScene::particleEffect.transform;
+            meshRenderer.draw(Renderer::Transform(transform.position, transform.rotation, TestScene::particleEffect.spawnArea));
+          } //Particle Bounds
         }
+
+        TestScene::draw();
       }
 
       UI::Core::draw();
-      if constexpr (false) { //Draw Old UI
-        Core::SetState(Renderer::State::UI); 
-        const sf::Vector2f size = sf::Vector2f{Core::windowSize.x / 6.0f, static_cast<float>(Core::windowSize.y)};
 
-        sf::RectangleShape background(size);
-        background.setFillColor(sf::Color(15,15,15));
-
-        sf::Font font;
-        sf::Text text(font);
-        const uint32_t charSize = 15;
-        const uint32_t elementPad = 5;
-        const sf::Vector2f listPad = sf::Vector2f{5,15};
-        text.setCharacterSize(charSize);
-
-        { //Left
-          background.setPosition(sf::Vector2f{0,0});
-          Core::window->draw(background);
-
-          const std::vector<std::string> elements = {
-            BoolString("F1| Wireframe Mode", Core::WireframeMode),
-            BoolString("F2| Show Normals", System::ShowMeshNormals),
-            BoolString("F3| Light Gizmos", System::ShowLightGizmos),
-          };
-
-          for(int i = 0; i < elements.size(); i++) {
-            text.setString(elements[i]);
-            text.setPosition(listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Core::window->draw(text);
-          }
-        } //Left
-        { //Right
-          background.setPosition(sf::Vector2f{static_cast<float>(Core::windowSize.x - size.x),0});
-          Core::window->draw(background);
-
-          const glm::vec3 &camPos = glm::vec3(glm::ivec3(Core::camera->transform.position * 100.0f)) / 100.0f;
-          glm::vec3 camEuler;
-          glm::extractEulerAngleYXZ(glm::mat4_cast(camera->transform.rotation), camEuler.y, camEuler.x, camEuler.z);
-          camEuler *= (180.0f / glm::pi<float>());
-
-          const std::vector<std::string> elements = {
-            std::format("Editor Cam Pos {}", Vec3String(camPos)),
-            std::format("Editor Cam Rot {}", Vec3String(camEuler)),
-          };
-
-          const sf::Vector2f start = background.getPosition();
-
-          for(int i = 0; i < elements.size(); i++) {
-            text.setString(elements[i]);
-            text.setPosition(start + listPad + sf::Vector2f{0, static_cast<float>((charSize + elementPad) * i)});
-            Core::window->draw(text);
-          }
-        } //Right
-      }
-
-      Core::display();
+      Renderer::Core::display();
     }
   }
 
-  Core::end();
+  Renderer::Core::end();
 
   return 0;
 }
