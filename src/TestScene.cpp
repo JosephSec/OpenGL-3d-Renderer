@@ -14,7 +14,7 @@ GLuint TestScene::particleTexture;
 std::vector<std::pair<Renderer::Mesh, Renderer::MeshRenderer>> TestScene::meshes;
 std::vector<std::vector<Renderer::Transform>> TestScene::meshInstances;
 
-ParticleEffect TestScene::particleEffect;
+ParticleSystem TestScene::particleSystem;
 
 
 void TestScene::init() {
@@ -89,17 +89,22 @@ void TestScene::init() {
   }
 
 
-  particleEffect = ParticleEffect(Renderer::Transform(glm::vec3(0,-4.75f,0)), particleTexture);
+  particleSystem = ParticleSystem(Renderer::Transform(glm::vec3(0,-4.75f,0)), particleTexture);
   // Renderer::Mesh mesh = Renderer::MeshHelper::GenerateCube();
   // Renderer::MeshHelper::RandomizeMeshColors(mesh, {{1,0,0,1}, {0,1,0,1}, {0,0,1,1}});
   Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad();
-  particleEffect.setMesh(mesh);
-  particleEffect.setShader(Renderer::Core::GetShader("Unlit"));
-  particleEffect.spawnRate = .01f;
-  particleEffect.lifeTime = 10;
-  particleEffect.gravity = glm::vec3(0);
-  particleEffect.initialVelocity = glm::vec3(0,1,0);
-  particleEffect.spawnArea = glm::vec3(20,.5f,20);
+  particleSystem.setMesh(mesh);
+  particleSystem.setShader(Renderer::Core::GetShader("Unlit"));
+  particleSystem.gravity = glm::vec3(0);
+
+  BoxParticleEmitter *particleEmitter = new BoxParticleEmitter();
+  particleEmitter->spawnRate = .01f;
+  particleEmitter->lifeTimeMin = 0.1f;
+  particleEmitter->lifeTimeMax = 10.0f;
+  particleEmitter->initialVelocity = glm::vec3(0,1,0);
+  particleEmitter->area = glm::vec3(20,.5f,20);
+
+  particleSystem.emitter = particleEmitter;
 }
 void TestScene::update() {
   { //Dynamic Lighting
@@ -135,7 +140,7 @@ void TestScene::update() {
     }
   }
 
-  particleEffect.update();
+  particleSystem.update();
 }
 void TestScene::draw() { 
   { //Ground
@@ -161,5 +166,5 @@ void TestScene::draw() {
     meshes[0].second.draw(Renderer::Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(1)));
   }
 
-  particleEffect.draw();
+  particleSystem.draw();
 }

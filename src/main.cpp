@@ -44,6 +44,9 @@ static void init() {
 
   Renderer::Core::init({800 + 225 * 2, 600}, "3D Rendering Library");
   Renderer::Core::window->setVerticalSyncEnabled(true);
+  Renderer::Core::LoadShader("Unlit");
+  Renderer::Core::LoadShader("Lit");
+  
 
   User::init();
   EditorCamera::init();
@@ -125,7 +128,7 @@ int main(int argc, char *argv[]) {
             mesh.indices = {0,1,2,3,4,5};
             Renderer::MeshRenderer transformRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
 
-            for(const Renderer::Transform &transform : TestScene::particleEffect.getInstancingData()) {
+            for(const Renderer::Transform &transform : TestScene::particleSystem.getInstancingData()) {
             mesh.vertices[1] = Renderer::Mesh::Vertex{transform.right(),   {1,0,0,1}};
             mesh.vertices[3] = Renderer::Mesh::Vertex{transform.up(),      {0,1,0,1}};
             mesh.vertices[5] = Renderer::Mesh::Vertex{transform.forward(), {0,0,1,1}};
@@ -134,13 +137,7 @@ int main(int argc, char *argv[]) {
             transformRenderer.draw(Renderer::Transform(transform.position, glm::quat(), glm::vec3(1)));
           }
           } //Particle Transforms
-          { //Particle Bounds
-            Renderer::Mesh mesh = Renderer::MeshHelper::GenerateWireCube();
-            Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
-
-            Renderer::Transform transform = TestScene::particleEffect.transform;
-            meshRenderer.draw(Renderer::Transform(transform.position, transform.rotation, TestScene::particleEffect.spawnArea));
-          } //Particle Bounds
+          TestScene::particleSystem.drawGizmos();
         }
 
         TestScene::draw();

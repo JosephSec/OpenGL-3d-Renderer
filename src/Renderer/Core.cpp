@@ -25,11 +25,11 @@ std::map<std::string, Shader> Core::s_shaders;
 
 void Core::init(const sf::Vector2u _windowSize, const std::string _windowName) {
   sf::ContextSettings settings;
-  settings.depthBits = 24;
-  settings.stencilBits = 8;
-  settings.antiAliasingLevel = 4;
-  settings.majorVersion = 3;
-  settings.minorVersion = 3;
+  settings.depthBits = CONTEXT_DEPTH_BITS;
+  settings.stencilBits = CONTEXT_STENCIL_BITS;
+  settings.antiAliasingLevel = CONTEXT_ANTI_ALIASING_LEVEL;
+  settings.majorVersion = CONTEXT_MAJOR_VERSION;
+  settings.minorVersion = CONTEXT_MINOR_VERSION;
   settings.attributeFlags = sf::ContextSettings::Default;
 
   window = new sf::RenderWindow(sf::VideoMode{_windowSize}, _windowName, sf::State::Windowed, settings);
@@ -38,8 +38,7 @@ void Core::init(const sf::Vector2u _windowSize, const std::string _windowName) {
 
   windowSize = glm::ivec2(_windowSize.x, _windowSize.y);
 
-  Core::LoadShader("Unlit");
-  Core::LoadShader("Lit");
+  std::cout << "Update Renderer Library: Add macros to define which parts are included\n\n";
 }
 void Core::end() {
   for(const auto &[name, shader] : s_shaders) glDeleteProgram(shader);

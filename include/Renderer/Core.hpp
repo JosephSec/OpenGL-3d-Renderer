@@ -14,6 +14,12 @@
 
 
 namespace Renderer {
+  #define CONTEXT_DEPTH_BITS 24
+  #define CONTEXT_STENCIL_BITS 8
+  #define CONTEXT_ANTI_ALIASING_LEVEL 4
+  #define CONTEXT_MINOR_VERSION 3
+  #define CONTEXT_MAJOR_VERSION 4
+
   enum class State {
     OpenGL,
     UI

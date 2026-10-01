@@ -76,7 +76,7 @@ void User::HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed) {
 
     ss << "Delta Time: " << System::deltaTime << '\n' <<
           "Frames Per Second: " << (1 / System::deltaTime) << '\n' <<
-          "Particle Count: " << TestScene::particleEffect.getParticleCount() << '\n';
+          "Particle Count: " << TestScene::particleSystem.getParticleCount() << '\n';
 
     std::cout << ss.str();
   }
