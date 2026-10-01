@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
         if(System::ShowMeshNormals && TestScene::meshes.empty() == false) {
           Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmos(TestScene::meshes[0].first, {0,0,1,1});
           Renderer::MeshRenderer normalRenderer(&normalMesh, Renderer::Core::GetShader("Unlit"));
-          normalRenderer.draw(glm::mat4x4(1));
+          normalRenderer.draw(Renderer::Transform(glm::vec3(0), glm::quat(), glm::vec3(.5f)).getMatrix());
         }
         if(System::ShowLightGizmos) {
           Renderer::Mesh lightMesh = Renderer::MeshHelper::GenerateUVSphere(8,8,.25f);
@@ -113,31 +113,8 @@ int main(int argc, char *argv[]) {
           }
         }
         if(System::ShowParticleGizmos) {
-          { //Particle Transforms
-            Renderer::Mesh mesh(Renderer::MeshType::Lines);
-            mesh.vertices = {
-              Renderer::Mesh::Vertex{{0,0,0}, {1,0,0,1}},
-              Renderer::Mesh::Vertex{{0,0,0}, {1,0,0,1}},
-
-              Renderer::Mesh::Vertex{{0,0,0}, {0,1,0,1}},
-              Renderer::Mesh::Vertex{{0,0,0}, {0,1,0,1}},
-
-              Renderer::Mesh::Vertex{{0,0,0}, {0,0,1,1}},
-              Renderer::Mesh::Vertex{{0,0,0}, {0,0,1,1}},
-            };
-            mesh.indices = {0,1,2,3,4,5};
-            Renderer::MeshRenderer transformRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
-
-            for(const Renderer::Transform &transform : TestScene::particleSystem.getInstancingData()) {
-            mesh.vertices[1] = Renderer::Mesh::Vertex{transform.right(),   {1,0,0,1}};
-            mesh.vertices[3] = Renderer::Mesh::Vertex{transform.up(),      {0,1,0,1}};
-            mesh.vertices[5] = Renderer::Mesh::Vertex{transform.forward(), {0,0,1,1}};
-
-            transformRenderer.updateMeshData();
-            transformRenderer.draw(Renderer::Transform(transform.position, glm::quat(), glm::vec3(1)));
-          }
-          } //Particle Transforms
-          TestScene::particleSystem.drawGizmos();
+          TestScene::boxParticleSystem.drawGizmos();
+          TestScene::sphereParticleSystem.drawGizmos();
         }
 
         TestScene::draw();
@@ -153,20 +130,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-
-
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS
-//TRY OUT COMPUTE SHADERS

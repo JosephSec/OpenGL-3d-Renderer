@@ -1,4 +1,5 @@
-#include <ParticleSystem.hpp>
+#include <Renderer/Component/ParticleSystem.hpp>
+using namespace Renderer;
 
 #include <Renderer/Core.hpp>
 
@@ -9,14 +10,6 @@
 #include <chrono>
 
 
-float ParticleEmitter::getNewParticleLifeTime() const {
-  return lifeTimeMin + (lifeTimeMax - lifeTimeMin) * m_randGen(m_randSeed);
-}
-float ParticleEmitter::getNewParticleSize() const {
-  return spawnSizeMin + (spawnSizeMax - spawnSizeMin) * m_randGen(m_randSeed);
-}
-
-
 void BoxParticleEmitter::drawGizmos(const Renderer::Transform &_transform) const {
   Renderer::Mesh boxMesh = Renderer::MeshHelper::GenerateWireCube();
   Renderer::MeshHelper::RandomizeMeshColors(boxMesh, {{0,1,0,1}});
@@ -25,18 +18,43 @@ void BoxParticleEmitter::drawGizmos(const Renderer::Transform &_transform) const
   boxRenderer.draw(Renderer::Transform(_transform.position, _transform.rotation, area).getMatrix());
 }
 
-glm::vec3 BoxParticleEmitter::getNewParticlePosition() const {
+Particle BoxParticleEmitter::getNewParticle() const {
   std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
-  std::uniform_real_distribution<float> randUniform(-.5f, .5f);
-
-  return {
-    randUniform(gen) * area.x,
-    randUniform(gen) * area.y,
-    randUniform(gen) * area.z,
+  std::uniform_real_distribution<float> randUniform(0,1);
+  
+  return Particle{
+    ParticleEmitter::getNewLifeTime(randUniform(gen)),
+    ParticleEmitter::getNewSpawnSize(randUniform(gen)),
+    glm::vec3{randUniform(gen) * area.x, randUniform(gen) * area.y,randUniform(gen) * area.z} - area / 2.0f,
+    initialVelocity
   };
 }
-glm::vec3 BoxParticleEmitter::getNewParticleVelocity() const {
-  return initialVelocity;
+
+
+void SphereParticleEmitter::drawGizmos(const Renderer::Transform &_transform) const {
+  Renderer::Mesh sphereMesh = Renderer::MeshHelper::GenerateWireSphere(16, radius);
+  Renderer::MeshHelper::RandomizeMeshColors(sphereMesh, {{0,1,0,1}});
+
+  Renderer::MeshRenderer sphereRenderer(&sphereMesh, Renderer::Core::GetShader("Unlit"));
+  sphereRenderer.draw(Renderer::Transform(_transform.position, _transform.rotation, glm::vec3(1)).getMatrix());
+}
+
+Particle SphereParticleEmitter::getNewParticle() const {
+  std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+  std::uniform_real_distribution<float> randUniform(0,1);
+  
+  const glm::vec3 position = glm::normalize(glm::vec3{
+    glm::cos(randUniform(gen) * glm::two_pi<float>()),
+    glm::sin(randUniform(gen) * glm::two_pi<float>()),
+    glm::sin(randUniform(gen) * glm::two_pi<float>())
+  }) * glm::pow(randUniform(gen), 1.0f / 3.0f) * radius;
+
+  return Particle{
+    ParticleEmitter::getNewLifeTime(randUniform(gen)),
+    ParticleEmitter::getNewSpawnSize(randUniform(gen)),
+    position,
+    glm::normalize(position) * velocityStrength
+  };
 }
 
 
@@ -56,13 +74,8 @@ void ParticleSystem::update() {
       std::uniform_real_distribution<float> randUniform(0, 1);
 
       m_particleCount += 1;
-      const Particle particle = {
-        emitter->getNewParticleLifeTime(),
-        emitter->getNewParticleSize(),
-        transform.position + emitter->getNewParticlePosition(),
-        emitter->getNewParticleVelocity()
-      };
-
+      Particle particle = emitter->getNewParticle();
+      particle.position += transform.position;
       m_particles.push_back(particle);
     }
   } //Update Spawn Time
@@ -98,6 +111,13 @@ void ParticleSystem::draw() const {
 void ParticleSystem::drawGizmos() const {
   if(emitter != nullptr) emitter->drawGizmos(transform);
 }
+
+void ParticleSystem::reset() {
+  m_particleCount = 0;
+  m_particles.resize(0);
+  m_meshRenderer.clearInstancingData();
+}
+
 
 const std::vector<Renderer::Transform> ParticleSystem::getInstancingData() const noexcept {
   std::vector<Renderer::Transform> transforms(m_particleCount);

@@ -5,7 +5,7 @@
 #include <GL/glew.h>
 
 #include <Renderer/Component/MeshRenderer.hpp>
-#include <ParticleSystem.hpp>
+#include <Renderer/Component/ParticleSystem.hpp>
 
 
 
@@ -17,7 +17,10 @@ public:
   static std::vector<std::pair<Renderer::Mesh, Renderer::MeshRenderer>> meshes;
   static std::vector<std::vector<Renderer::Transform>> meshInstances;
 
-  static ParticleSystem particleSystem;
+  static std::vector<Renderer::ParticleSystem*> particleSystems;
+
+  static Renderer::ParticleSystem boxParticleSystem;
+  static Renderer::ParticleSystem sphereParticleSystem;
 
 
   static void init();

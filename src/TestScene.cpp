@@ -14,7 +14,10 @@ GLuint TestScene::particleTexture;
 std::vector<std::pair<Renderer::Mesh, Renderer::MeshRenderer>> TestScene::meshes;
 std::vector<std::vector<Renderer::Transform>> TestScene::meshInstances;
 
-ParticleSystem TestScene::particleSystem;
+std::vector<Renderer::ParticleSystem*> TestScene::particleSystems;
+
+Renderer::ParticleSystem TestScene::boxParticleSystem;
+Renderer::ParticleSystem TestScene::sphereParticleSystem;
 
 
 void TestScene::init() {
@@ -33,7 +36,7 @@ void TestScene::init() {
   Renderer::Core::UpdateDynamicLighting();
 
 
-  if(false) { //Load Camera
+  if(true) { //Load Camera
     meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
     Renderer::MeshHelper::LoadMeshObj(meshes.back().first, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
     meshes.back().second.setMesh(&meshes.back().first);
@@ -53,12 +56,6 @@ void TestScene::init() {
     meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
     meshes.back().first = Renderer::MeshHelper::GenerateCylinder();
     meshes.back().second.setMesh(&meshes.back().first);
-  }
-  if(true) { //Load Shape
-    meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
-    meshes.back().first = Renderer::MeshHelper::GenerateQuad();
-    meshes.back().second.setMesh(&meshes.back().first);
-    meshes.back().second.backFaceCulling = false;
   }
 
   if(false) { //Generate Mesh Instances
@@ -89,22 +86,45 @@ void TestScene::init() {
   }
 
 
-  particleSystem = ParticleSystem(Renderer::Transform(glm::vec3(0,-4.75f,0)), particleTexture);
-  // Renderer::Mesh mesh = Renderer::MeshHelper::GenerateCube();
-  // Renderer::MeshHelper::RandomizeMeshColors(mesh, {{1,0,0,1}, {0,1,0,1}, {0,0,1,1}});
-  Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad();
-  particleSystem.setMesh(mesh);
-  particleSystem.setShader(Renderer::Core::GetShader("Unlit"));
-  particleSystem.gravity = glm::vec3(0);
+  { //Init Box Particle System
+    boxParticleSystem = Renderer::ParticleSystem(Renderer::Transform(glm::vec3(-5,-4.75f,-5)), particleTexture);
+    Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad();
+    boxParticleSystem.setMesh(mesh);
+    boxParticleSystem.setShader(Renderer::Core::GetShader("Unlit"));
+    boxParticleSystem.gravity = glm::vec3(0);
 
-  BoxParticleEmitter *particleEmitter = new BoxParticleEmitter();
-  particleEmitter->spawnRate = .01f;
-  particleEmitter->lifeTimeMin = 0.1f;
-  particleEmitter->lifeTimeMax = 10.0f;
-  particleEmitter->initialVelocity = glm::vec3(0,1,0);
-  particleEmitter->area = glm::vec3(20,.5f,20);
+    Renderer::BoxParticleEmitter *particleEmitter = new Renderer::BoxParticleEmitter();
+    particleEmitter->spawnRate = .01f;
+    particleEmitter->lifeTimeMin = 0.1f;
+    particleEmitter->lifeTimeMax = 1.0f;
+    particleEmitter->spawnSizeMin = 0.1f;
+    particleEmitter->spawnSizeMax = 0.5f;
+    particleEmitter->initialVelocity = glm::vec3(0,1,0);
+    particleEmitter->area = glm::vec3(3,.5f,3);
 
-  particleSystem.emitter = particleEmitter;
+    boxParticleSystem.emitter = particleEmitter;
+  } //Init Box Particle System
+  { //Init Sphere Particle System
+    sphereParticleSystem = Renderer::ParticleSystem(Renderer::Transform(glm::vec3(-5,0,-5)), particleTexture);
+    Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad();
+    Renderer::MeshHelper::RandomizeMeshColors(mesh, {{0,1,0,1}});
+    sphereParticleSystem.setMesh(mesh);
+    sphereParticleSystem.setShader(Renderer::Core::GetShader("Unlit"));
+    sphereParticleSystem.gravity = glm::vec3(0);
+
+    Renderer::SphereParticleEmitter *particleEmitter = new Renderer::SphereParticleEmitter();
+    particleEmitter->spawnRate = .01f;
+    particleEmitter->lifeTimeMin = 0.1f;
+    particleEmitter->lifeTimeMax = 1.0f;
+    particleEmitter->spawnSizeMin = 0.1f;
+    particleEmitter->spawnSizeMax = 0.5f;
+    particleEmitter->velocityStrength = 1;
+    particleEmitter->radius = 1;
+    
+    sphereParticleSystem.emitter = particleEmitter;
+  } //Init Sphere Particle System
+
+  particleSystems = {&boxParticleSystem, &sphereParticleSystem};
 }
 void TestScene::update() {
   { //Dynamic Lighting
@@ -140,31 +160,50 @@ void TestScene::update() {
     }
   }
 
-  particleSystem.update();
+  for(Renderer::ParticleSystem *particleSystem : particleSystems) particleSystem->update();
 }
 void TestScene::draw() { 
   { //Ground
     Renderer::Mesh mesh = Renderer::MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
     Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Lit"));
-    meshRenderer.material = Renderer::Material{{1,1,1}, {.5f,.1f}, nullTexture};
+    meshRenderer.material = Renderer::Material{{1,1,1}, {.5f,.1f}};
     meshRenderer.draw(Renderer::Transform(glm::vec3(0,-5,0)));
   } //Ground
 
   for(const auto &[mesh, renderer] : meshes) renderer.drawInstanced();
 
-  if(false && meshes.empty() == false) { //Material Types
-    // meshes[0].second.material = Material{{1,1,1}, {.1f,.9f}};
-    // meshes[0].second.draw(Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(6)));
+  if(true && meshes.empty() == false) { //Material Types
+    meshes[0].second.material = Renderer::Material{{1,1,1}, {.1f,1}};
+    meshes[0].second.draw(Renderer::Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(.5f)));
 
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {.1f,1}, particleTexture};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(1)));
+    meshes[0].second.material = Renderer::Material{{1,1,1}, {.5f,.5f}};
+    meshes[0].second.draw(Renderer::Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(.5f)));
 
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {.5f,.5f}, particleTexture};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(1)));
-
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {1,.1f}, particleTexture};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(1)));
+    meshes[0].second.material = Renderer::Material{{1,1,1}, {1,.1f}};
+    meshes[0].second.draw(Renderer::Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(.5f)));
   }
 
-  particleSystem.draw();
+  { //Texture Displays
+    Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad(glm::vec2(3,3));
+    Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Unlit"));
+    meshRenderer.backFaceCulling = false;
+    meshRenderer.material = Renderer::Material{{1,1,1}, {.5f,.1f}};
+
+    meshRenderer.material.diffuseTex = nullTexture;
+    meshRenderer.draw(Renderer::Transform(glm::vec3(-2,0,-10)));
+    meshRenderer.material.diffuseTex = particleTexture;
+    meshRenderer.draw(Renderer::Transform(glm::vec3(2,0,-10)));
+  } //Texture Displays
+
+  { //Particle Systems
+    std::vector<size_t> sortedIndices(particleSystems.size());
+    std::iota(sortedIndices.begin(), sortedIndices.end(), 0);
+    std::sort(sortedIndices.begin(), sortedIndices.end(), [](size_t a, size_t b) {
+      float distA = glm::length(Renderer::Core::camera->transform.position - particleSystems[a]->transform.position);
+      float distB = glm::length(Renderer::Core::camera->transform.position - particleSystems[b]->transform.position);
+      return distA > distB;
+    });
+  
+    for(size_t i : sortedIndices) particleSystems[i]->draw();
+  } //Particle Systems
 }
