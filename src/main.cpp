@@ -56,7 +56,7 @@ static void init() {
 int main(int argc, char *argv[]) {
   init();
 
-  { //Generate Particle Texture
+  if constexpr (false) { //Generate Particle Texture
     sf::Image image(sf::Vector2u(50,50));
 
     for(int x = 0; x < image.getSize().x; x++) {
