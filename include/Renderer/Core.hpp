@@ -31,14 +31,12 @@ namespace Renderer {
 
     static float deltaTime;
 
-    static bool WireframeMode;
-
     static Camera *camera;
     static glm::mat4x4 viewMatrix;
     static glm::mat4x4 projectionMatrix;
 
     static glm::vec4 ambientLight;
-    static std::vector<Light> lights;
+    static std::vector<Light*> lights;
 
 
     static void init(const sf::Vector2u _windowSize = sf::Vector2u{800,600}, const std::string _windowName = "OpenGL 3d Renderer");
@@ -67,10 +65,15 @@ namespace Renderer {
     static void SetShader(GLuint _program);
 
 
-    static void ToggleWireframeMode(bool _enable = !WireframeMode);
+    static void ToggleWireframeMode(bool _enable = !s_WireframeMode);
+    static inline bool GetWireFrameMode() {
+      return s_WireframeMode;
+    }
 
   private:
     static std::map<std::string, Shader> s_shaders;
+
+    static bool s_WireframeMode;
 
 
     static void initGL();

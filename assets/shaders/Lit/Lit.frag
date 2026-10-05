@@ -7,9 +7,21 @@ in vec2 vUV;
 out vec4 FragColor;
 
 
+#define TYPE_POINT 0
+#define TYPE_DIRECTIONAL 1
+#define TYPE_SPOT 2
+
 struct Light {
-  vec4 position; // pos: xyz | radius: w
+  int type; //0 - point | 1 - directional | 2 - spot
+
+  vec3 position;
+  vec3 direction;
+
   vec4 color;    // rgb: xyz | strength: w
+  float radius;
+
+  float innerCutOff;
+  float outerCutOff;
 };
 struct Material {
   sampler2D diffuseTex;
@@ -30,8 +42,10 @@ uniform Light lights[MAX_LIGHTS];
 
 
 float GetLightAttenuation(Light light, vec3 lightDir) {
+  if(light.type == TYPE_DIRECTIONAL) return 1.0; //directional lights give max attenuation
+
   float dist = length(lightDir);
-  return 1 - min(dist, light.position.w) / light.position.w;
+  return 1 - min(dist, light.radius) / light.radius;
 }
 vec3 CalculateAmbient() {
   return ambientLight.rgb * ambientLight.a;
@@ -68,15 +82,29 @@ void main() {
   vec3 totalLight = CalculateAmbient() * albedo;
 
   for(int i = 0; i < lightCount; i++) {
-    vec3 direction = lights[i].position.xyz - vPos;
-    float attenuation = GetLightAttenuation(lights[i], direction);
-    
+    Light light = lights[i];
+
+    vec3 direction;
+    if(light.type == TYPE_DIRECTIONAL) direction = -normalize(light.direction);
+    else direction = light.position.xyz - vPos;
+
+    float attenuation = GetLightAttenuation(light, direction);    
     if(attenuation <= 0) continue;
 
-    vec3 normDirection = normalize(direction);
+    vec3 normDirection = (light.type == TYPE_DIRECTIONAL)? direction : normalize(direction);
 
-    vec3 diffuse = CalculateDiffuse(lights[i], normal, normDirection, attenuation) * (1 - metallic);
-    vec3 specular = CalculateSpecular(lights[i], normal, normDirection, attenuation, roughness, metallic, albedo);
+    if(light.type == TYPE_SPOT) {
+      float theta = dot(-normDirection, normalize(light.direction));
+      float epsilon = light.innerCutOff - light.outerCutOff;
+
+      float spotIntensity = clamp((theta - light.outerCutOff) / epsilon, 0.0,1.0);
+      attenuation *= spotIntensity;
+
+      if(attenuation <= 0) continue;
+    }
+
+    vec3 diffuse = CalculateDiffuse(light, normal, normDirection, attenuation) * (1 - metallic);
+    vec3 specular = CalculateSpecular(light, normal, normDirection, attenuation, roughness, metallic, albedo);
 
     totalLight += (diffuse + specular) * lights[i].color.w;
   }
@@ -84,5 +112,9 @@ void main() {
   vec4 texColor = vec4(1);
   if(material.useDiffuseTex) texColor = texture(material.diffuseTex, vUV);
 
-  FragColor = texColor * vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
+  vec4 finalColor = texColor * vec4(clamp(vColor.rgb * totalLight, 0,1), vColor.a);
+
+  finalColor.rgb = pow(finalColor.rgb, vec3(1.0/2.2));
+
+  FragColor = finalColor;
 }

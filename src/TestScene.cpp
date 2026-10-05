@@ -11,7 +11,8 @@
 GLuint TestScene::nullTexture;
 GLuint TestScene::particleTexture;
 
-std::vector<std::pair<Renderer::Mesh, Renderer::MeshRenderer>> TestScene::meshes;
+std::vector<Renderer::Mesh> TestScene::meshes;
+std::vector<Renderer::MeshRenderer> TestScene::meshRenderers;
 std::vector<std::vector<Renderer::Transform>> TestScene::meshInstances;
 
 std::vector<Renderer::ParticleSystem*> TestScene::particleSystems;
@@ -26,39 +27,53 @@ void TestScene::init() {
 
   Renderer::Core::ambientLight = {.1,.1,.1, .1};
   Renderer::Core::lights = {
-    Renderer::Light{{0,0,0}, {1,0,0}, 15.0f, 1.0f},
-    Renderer::Light{{0,0,0}, {0,1,0}, 15.0f, 1.0f},
-    Renderer::Light{{0,0,0}, {0,0,1}, 15.0f, 1.0f},
-    Renderer::Light{{0,0,0}, {1,1,0}, 15.0f, 1.0f},
-    Renderer::Light{{0,0,0}, {1,0,1}, 15.0f, 1.0f},
-    Renderer::Light{{0,0,0}, {0,1,1}, 15.0f, 1.0f},
+    // new Renderer::PointLight{{0,0,0}, {1,0,0}, 1.0f, 15.0f},
+    new Renderer::PointLight{{0,0,0}, {0,1,0}, 1.0f, 7.5f},
+    // new Renderer::PointLight{{0,0,0}, {0,0,1}, 1.0f, 15.0f},
+    // new Renderer::PointLight{{0,0,0}, {1,1,0}, 1.0f, 15.0f},
+    // new Renderer::PointLight{{0,0,0}, {1,0,1}, 1.0f, 15.0f},
+    // new Renderer::PointLight{{0,0,0}, {0,1,1}, 1.0f, 15.0f},{0.55f, 0.62f, 0.67f}
+    new Renderer::DirectionalLight{{0,15,0}, {.55f,.62f,.67f}, 1.0f},
+    new Renderer::SpotLight{{0,-4.5,0}, {1,0,0}, 5.0f, 15, {0,0,-1}, 15, 45},
   };
   Renderer::Core::UpdateDynamicLighting();
 
 
-  if(true) { //Load Camera
-    meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
-    Renderer::MeshHelper::LoadMeshObj(meshes.back().first, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
-    meshes.back().second.setMesh(&meshes.back().first);
+  if constexpr(false) { //Load Dragon
+    Renderer::Mesh mesh;
+    Renderer::MeshHelper::LoadMeshObj(mesh, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
+    meshes.push_back(mesh);
+    meshRenderers.push_back(Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit")));
   }
-  if(false) { //Load Dragon
-    meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
-    Renderer::MeshHelper::LoadMeshObj(meshes.back().first, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
-    meshes.back().second.material = Renderer::Material{{1,1,1}, {0.05f,1.0f}};
-    meshes.back().second.setMesh(&meshes.back().first);
+  if constexpr(false) { //Load UV Sphere
+    Renderer::Mesh mesh = Renderer::MeshHelper::GenerateUVSphere();
+    meshes.push_back(mesh);
+    meshRenderers.push_back(Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit")));
   }
-  if(false) { //Load UV Sphere
-    meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
-    meshes.back().first = Renderer::MeshHelper::GenerateUVSphere();
-    meshes.back().second.setMesh(&meshes.back().first);
+  if constexpr(false) { //Load Cylinder
+    Renderer::Mesh mesh = Renderer::MeshHelper::GenerateCylinder();
+    meshes.push_back(mesh);
+    meshRenderers.push_back(Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit")));
   }
-  if(false) { //Load Cylinder
-    meshes.push_back({Renderer::Mesh(), Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit"))});
-    meshes.back().first = Renderer::MeshHelper::GenerateCylinder();
-    meshes.back().second.setMesh(&meshes.back().first);
+  if constexpr(true) { //Load Camera
+    Renderer::Mesh mesh;
+    Renderer::MeshHelper::LoadMeshObj(mesh, std::filesystem::path(System::PATH)/"assets/meshes/camera.obj");
+    meshes.push_back(mesh);
+    meshRenderers.push_back(Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit")));
+  }
+  if constexpr(true) { //Load Security Camera
+    Renderer::Mesh mesh;
+    Renderer::MeshHelper::LoadMeshObj(mesh, std::filesystem::path(System::PATH)/"assets/meshes/security_camera.obj");
+    meshes.push_back(mesh);
+    meshRenderers.push_back(Renderer::MeshRenderer(nullptr, Renderer::Core::GetShader("Lit")));
   }
 
-  if(false) { //Generate Mesh Instances
+  for(int i = 0; i < meshes.size(); i++) {
+    meshRenderers[i].setMesh(&meshes[i]);
+  }
+
+
+  if constexpr(false) { //Generate Mesh Instances
     static constexpr uint64_t SPAWN_COUNT = 30;
     static constexpr float SPAWN_RADIUS = 15;
     static constexpr float ROTATION_RANGE = 180;
@@ -81,10 +96,9 @@ void TestScene::init() {
         meshInstances[i][j] = Renderer::Transform(randomPos, randomRot, glm::vec3(randSize(gen)));
       }
 
-      meshes[i].second.updateInstancingData(meshInstances[i]);
+      meshRenderers[i].updateInstancingData(meshInstances[i]);
     }
   }
-
 
   { //Init Box Particle System
     boxParticleSystem = Renderer::ParticleSystem(Renderer::Transform(glm::vec3(-5,-4.75f,-5)), particleTexture);
@@ -110,7 +124,7 @@ void TestScene::init() {
     Renderer::MeshHelper::RandomizeMeshColors(mesh, {{0,1,0,1}});
     sphereParticleSystem.setMesh(mesh);
     sphereParticleSystem.setShader(Renderer::Core::GetShader("Unlit"));
-    sphereParticleSystem.gravity = glm::vec3(0);
+    // sphereParticleSystem.gravity = glm::vec3(0);
 
     Renderer::SphereParticleEmitter *particleEmitter = new Renderer::SphereParticleEmitter();
     particleEmitter->spawnRate = .01f;
@@ -135,17 +149,19 @@ void TestScene::update() {
     const float c = glm::cos(animationT);
     const float s = glm::sin(animationT);
 
-    const std::vector<glm::vec3> points = {
-      glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
-      glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
-      glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
-      -glm::vec3(0, c * MOVE_RADIUS, s * MOVE_RADIUS),
-      -glm::vec3(c * MOVE_RADIUS, 0, s * MOVE_RADIUS),
-      -glm::vec3(c * MOVE_RADIUS, s * MOVE_RADIUS, 0),
-    };
-    for(int i = 0; i < Renderer::Core::lights.size(); i++) {
-      Renderer::Core::lights[i].position = points[i];
-    }
+    { //Point Light
+      Renderer::PointLight *pointLight = dynamic_cast<Renderer::PointLight*>(Renderer::Core::lights[0]);
+      pointLight->position = glm::vec3{c * MOVE_RADIUS, 0, s * MOVE_RADIUS};
+    } //Point Light
+    { //Directional Light
+      Renderer::DirectionalLight *directionalLight = dynamic_cast<Renderer::DirectionalLight*>(Renderer::Core::lights[1]);
+      directionalLight->direction = glm::vec3{c, -1, s};
+    } //Directional Light
+    { //Spot Light
+      Renderer::SpotLight *spotLight = dynamic_cast<Renderer::SpotLight*>(Renderer::Core::lights[2]);
+      spotLight->position = glm::vec3{c * MOVE_RADIUS, -4.5, s * MOVE_RADIUS};
+      spotLight->direction = -glm::vec3{spotLight->position.x, 0, spotLight->position.z};
+    } //Spot Light
 
     Renderer::Core::UpdateDynamicLighting();
   } //Dynamic Lighting  
@@ -156,31 +172,39 @@ void TestScene::update() {
         _instance.position -= _instance.position * System::deltaTime * .5f;
       }
 
-      meshes[i].second.updateInstancingData(meshInstances[i]);
+      meshRenderers[i].updateInstancingData(meshInstances[i]);
     }
   }
 
   for(Renderer::ParticleSystem *particleSystem : particleSystems) particleSystem->update();
 }
-void TestScene::draw() { 
+void TestScene::draw() {
   { //Ground
     Renderer::Mesh mesh = Renderer::MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
     Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Lit"));
     meshRenderer.material = Renderer::Material{{1,1,1}, {.5f,.1f}};
     meshRenderer.draw(Renderer::Transform(glm::vec3(0,-5,0)));
   } //Ground
+  { //Security Camera
+    Renderer::Mesh mesh = Renderer::MeshHelper::GeneratePlane(glm::vec2(20,20), glm::ivec2(10,10));
+    Renderer::MeshRenderer meshRenderer = Renderer::MeshRenderer(&mesh, Renderer::Core::GetShader("Lit"));
+    meshRenderer.material = Renderer::Material{{1,1,1}, {0,.1f}};
+    meshRenderer.draw(Renderer::Transform(glm::vec3(10,5,0), glm::angleAxis(glm::radians<float>(90), glm::vec3(0,0,1))));
 
-  for(const auto &[mesh, renderer] : meshes) renderer.drawInstanced();
+    meshRenderers[1].draw(Renderer::Transform(glm::vec3(10,5,0), glm::angleAxis(glm::radians<float>(90), glm::vec3(0,1,0))));
+  }
+
+  for(const Renderer::MeshRenderer &renderer : meshRenderers) renderer.drawInstanced();
 
   if(true && meshes.empty() == false) { //Material Types
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {.1f,1}};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(.5f)));
+    meshRenderers[0].material = Renderer::Material{{1,1,1}, {.1f,1}};
+    meshRenderers[0].draw(Renderer::Transform(glm::vec3(-2,0,0), glm::quat(), glm::vec3(.5f)));
 
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {.5f,.5f}};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(.5f)));
+    meshRenderers[0].material = Renderer::Material{{1,1,1}, {.5f,.5f}};
+    meshRenderers[0].draw(Renderer::Transform(glm::vec3(0,0,0), glm::quat(), glm::vec3(.5f)));
 
-    meshes[0].second.material = Renderer::Material{{1,1,1}, {1,.1f}};
-    meshes[0].second.draw(Renderer::Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(.5f)));
+    meshRenderers[0].material = Renderer::Material{{1,1,1}, {1,.1f}};
+    meshRenderers[0].draw(Renderer::Transform(glm::vec3(2,0,0), glm::quat(), glm::vec3(.5f)));
   }
 
   { //Texture Displays

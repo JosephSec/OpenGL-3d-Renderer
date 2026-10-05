@@ -34,8 +34,6 @@ namespace Renderer {
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-
-    GLuint *texture = nullptr;
     
 
     Mesh(MeshType _type = MeshType::LitTriangle);

@@ -50,7 +50,7 @@ namespace Renderer {
     bool backFaceCulling = true;
     Material material;
 
-  private:
+  // private:
     GLuint m_vao, m_vbo, m_ebo, m_instanceVbo;
     Mesh *m_mesh = nullptr;
     Shader *m_shader = nullptr;

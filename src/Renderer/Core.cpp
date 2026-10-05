@@ -9,17 +9,17 @@ glm::ivec2 Core::windowSize;
 
 float Core::deltaTime;
 
-bool Core::WireframeMode = false;
-
 Camera *Core::camera;
 glm::mat4x4 Core::projectionMatrix = glm::mat4x4(1);
 glm::mat4x4 Core::viewMatrix = glm::mat4x4(1);
 
 glm::vec4 Core::ambientLight;
-std::vector<Light> Core::lights;
+std::vector<Light*> Core::lights;
 
 //private
 std::map<std::string, Shader> Core::s_shaders;
+
+bool Core::s_WireframeMode = false;
 //private
 
 
@@ -38,11 +38,17 @@ void Core::init(const sf::Vector2u _windowSize, const std::string _windowName) {
 
   windowSize = glm::ivec2(_windowSize.x, _windowSize.y);
 
+
   std::cout << "Update Renderer Library: Add macros to define which parts are included\n\n";
 }
 void Core::end() {
+  for(Light *light : lights) delete light;
+  lights.clear();
+
   for(const auto &[name, shader] : s_shaders) glDeleteProgram(shader);
-  delete Core::window;  
+  s_shaders.clear();
+
+  delete Core::window;
 }
 
 
@@ -114,13 +120,7 @@ void Core::UpdateDynamicLighting() {
   LitShader.SetUniform("lightCount", lightCount);
 
   if(lightCount != 0) {
-    for(int i = 0; i < lightCount; i++) {
-      const Light &light = lights[i];
-
-      const std::string prefix = "lights[" + std::to_string(i) + "].";
-      LitShader.SetUniform(prefix+"position", glm::vec4(light.position, light.radius));
-      LitShader.SetUniform(prefix+"color", glm::vec4(light.color, light.strength));
-    }
+    for(int i = 0; i < lightCount; i++) lights[i]->setUniforms(&LitShader, i);
   }
 
   glUseProgram(0);
@@ -166,7 +166,7 @@ void Core::SetState(State _state) {
       glCullFace(GL_BACK);
       glFrontFace(GL_CW);
 
-      glPolygonMode(GL_FRONT_AND_BACK, WireframeMode? GL_LINE : GL_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, s_WireframeMode? GL_LINE : GL_FILL);
       break;
   }
 }
@@ -184,7 +184,7 @@ void Core::SetShader(GLuint _program) {
 
 
 void Core::ToggleWireframeMode(bool _enable) {
-  WireframeMode = _enable;
+  s_WireframeMode = _enable;
   glPolygonMode(GL_FRONT_AND_BACK, _enable? GL_LINE : GL_FILL);
 }
 

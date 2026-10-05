@@ -38,6 +38,7 @@ namespace Renderer {
 
     static Mesh GenerateGrid(const glm::ivec2 _size, float _spacing = 1);
     static Mesh GenerateWireSphere(uint16_t _resolution, float _radius);
-    static Mesh GenerateWireCube();
+    static Mesh GenerateWireCube(const glm::vec3 _size = glm::vec3(1));
+    static Mesh GenerateWireCone(uint16_t _baseResolution = 16, uint16_t _apexResolution = 4, float _degrees = 45, float _length = 1);
   };
 }

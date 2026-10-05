@@ -15,6 +15,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/norm.hpp>
 
 
 static std::string BoolString(const std::string &_str, bool _val) {
@@ -59,16 +60,35 @@ int main(int argc, char *argv[]) {
   if constexpr (false) { //Generate Particle Texture
     sf::Image image(sf::Vector2u(50,50));
 
-    for(int x = 0; x < image.getSize().x; x++) {
-      for(int y = 0; y < image.getSize().y; y++) {
+    for(unsigned int x = 0; x < image.getSize().x; x++) {
+      for(unsigned int y = 0; y < image.getSize().y; y++) {
         const float alpha = std::max<float>(0, 1 - glm::length(glm::vec2(x - 25,y - 25)) / 25.0f);
 
-        image.setPixel(sf::Vector2u{x,y}, sf::Color{255,255,255, alpha * 255});
+        image.setPixel(sf::Vector2u{x,y}, sf::Color{255,255,255, static_cast<uint8_t>(alpha * 255)});
       }      
     }
 
     image.saveToFile(System::PATH+"/assets/textures/particle.png");
   }
+  if constexpr (false) { //Generate Transparent Gizmo Tex
+    const std::filesystem::path file = System::PATH+"/assets/textures/gizmos/lighting/spot.png";
+
+    sf::Image image;
+    image.loadFromFile(file);
+
+    for(unsigned int x = 0; x < image.getSize().x; x++) {
+      for(unsigned int y = 0; y < image.getSize().y; y++) {
+        if(image.getPixel(sf::Vector2u{x,y}) == sf::Color{255,0,0,255}) {
+          image.setPixel(sf::Vector2u{x,y}, sf::Color{0,0,0,0});
+        }
+      }      
+    }
+
+    image.saveToFile(file);
+  }
+  Renderer::PointLight::GizmoTexture = Renderer::MeshHelper::LoadTexture(System::PATH+"/assets/textures/gizmos/lighting/point.png");
+  Renderer::DirectionalLight::GizmoTexture = Renderer::MeshHelper::LoadTexture(System::PATH+"/assets/textures/gizmos/lighting/directional.png");
+  Renderer::SpotLight::GizmoTexture = Renderer::MeshHelper::LoadTexture(System::PATH+"/assets/textures/gizmos/lighting/spot.png");
 
 
   while(Renderer::Core::window->isOpen()) {
@@ -96,28 +116,39 @@ int main(int argc, char *argv[]) {
       Renderer::Core::clear();
 
       Renderer::Core::SetState(Renderer::State::OpenGL); {
+        TestScene::draw();
+
+        Renderer::Core::ClearDepthBuffer();
+        
+        bool prevWireFrameState = Renderer::Core::GetWireFrameMode();
+        Renderer::Core::ToggleWireframeMode(false);
+
         if(System::ShowMeshNormals && TestScene::meshes.empty() == false) {
-          Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmos(TestScene::meshes[0].first, {0,0,1,1});
+          Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmos(TestScene::meshes[0], {0,0,1,1});
           Renderer::MeshRenderer normalRenderer(&normalMesh, Renderer::Core::GetShader("Unlit"));
           normalRenderer.draw(Renderer::Transform(glm::vec3(0), glm::quat(), glm::vec3(.5f)).getMatrix());
         }
         if(System::ShowLightGizmos) {
-          Renderer::Mesh lightMesh = Renderer::MeshHelper::GenerateUVSphere(8,8,.25f);
-          Renderer::MeshRenderer lightRenderer(&lightMesh, Renderer::Core::GetShader("Unlit"));
-          lightRenderer.backFaceCulling = false;
+          Renderer::Mesh textureMesh = Renderer::MeshHelper::GenerateQuad();
+          Renderer::MeshRenderer textureRenderer(&textureMesh, Renderer::Core::GetShader("Unlit"));
+          textureRenderer.backFaceCulling = false;
 
-          for(const Renderer::Light &light : Renderer::Core::lights) {
-            Renderer::MeshHelper::RandomizeMeshColors(lightMesh, {glm::vec4(light.color, 1)});
-            lightRenderer.updateMeshData();
-            lightRenderer.draw(Renderer::Transform(light.position).getMatrix());
-          }
+          std::vector<size_t> sortedIndices(Renderer::Core::lights.size());
+          std::iota(sortedIndices.begin(), sortedIndices.end(), 0);
+          std::sort(sortedIndices.begin(), sortedIndices.end(), [](size_t _a, size_t _b) {
+            const float distA = glm::length2(Renderer::Core::lights[_a]->position - Renderer::Core::camera->transform.position);
+            const float distB = glm::length2(Renderer::Core::lights[_b]->position - Renderer::Core::camera->transform.position);
+            return distA > distB;
+          });
+
+          for(size_t i : sortedIndices) Renderer::Core::lights[i]->drawGizmos();
         }
         if(System::ShowParticleGizmos) {
           TestScene::boxParticleSystem.drawGizmos();
           TestScene::sphereParticleSystem.drawGizmos();
         }
-
-        TestScene::draw();
+      
+        Renderer::Core::ToggleWireframeMode(prevWireFrameState);
       }
 
       UI::Core::draw();

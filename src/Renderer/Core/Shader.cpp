@@ -19,6 +19,8 @@ Shader::Shader(const std::string &_name) {
   glLinkProgram(program);
 
   for(const GLuint shader : shaders) glDeleteShader(shader);
+  
+  ValidateShaderProgram(program);
 }
 
 
@@ -110,4 +112,24 @@ GLint Shader::tryGetUniformLocation(GLuint _program, const std::string &_name) {
   }
 
   return location;
+}
+
+bool Shader::ValidateShaderProgram(GLuint _program) {
+  glValidateProgram(_program);
+
+  GLint success;
+  glGetProgramiv(_program, GL_VALIDATE_STATUS, &success);
+
+  if(success == GL_FALSE) {
+    GLint logLength = 0;
+    glGetProgramiv(_program, GL_INFO_LOG_LENGTH, &logLength);
+
+    std::vector<GLchar> log(logLength);
+    glGetProgramInfoLog(_program, logLength, &logLength, log.data());
+
+    std::cerr << "Shader validation failed:\n" << log.data() << std::endl;
+    return false;
+  }
+
+  return true;
 }

@@ -570,25 +570,57 @@ Mesh MeshHelper::GenerateWireSphere(uint16_t _resolution, float _radius) {
 
   return mesh;
 }
-Mesh MeshHelper::GenerateWireCube() {
+Mesh MeshHelper::GenerateWireCube(const glm::vec3 _size) {
   Mesh mesh(MeshType::Lines);
 
   mesh.vertices = {
-    Mesh::Vertex{{-.5,-.5, .5}, {1,1,1,1}},
-    Mesh::Vertex{{-.5, .5, .5}, {1,1,1,1}},
-    Mesh::Vertex{{ .5, .5, .5}, {1,1,1,1}},
-    Mesh::Vertex{{ .5,-.5, .5}, {1,1,1,1}},
-
-    Mesh::Vertex{{-.5,-.5,-.5}, {1,1,1,1}},
-    Mesh::Vertex{{-.5, .5,-.5}, {1,1,1,1}},
-    Mesh::Vertex{{ .5, .5,-.5}, {1,1,1,1}},
-    Mesh::Vertex{{ .5,-.5,-.5}, {1,1,1,1}},
+    Mesh::Vertex{{-.5 * _size.x, -.5 * _size.y,  .5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{-.5 * _size.x,  .5 * _size.y,  .5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y,  .5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y,  .5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{-.5 * _size.x, -.5 * _size.y, -.5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{-.5 * _size.x,  .5 * _size.y, -.5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{ .5 * _size.x,  .5 * _size.y, -.5 * _size.z}, {1,1,1,1}},
+    Mesh::Vertex{{ .5 * _size.x, -.5 * _size.y, -.5 * _size.z}, {1,1,1,1}},
   };
   mesh.indices = {
     0,1, 1,2, 2,3, 3,0,
     4,5, 5,6, 6,7, 7,4,
     0,4, 1,5, 2,6, 3,7
   };
+
+  return mesh;
+}
+Mesh MeshHelper::GenerateWireCone(uint16_t _baseResolution, uint16_t _apexResolution, float _degrees, float _length) {
+  assert(_baseResolution >= _apexResolution && "_apexResolution uses existing vertices created by _baseResolution, make sure _baseResolution >= _apexResolution");
+
+  Mesh mesh(MeshType::Lines);
+
+  mesh.vertices.resize(_baseResolution + 1);
+  mesh.indices.resize(_baseResolution * 2 + _apexResolution * 2);
+
+  { //Base
+    const float radians = glm::radians<float>(_degrees);
+    const float radius = glm::tan(radians) * _length;
+    const float phiDif = glm::two_pi<float>() / _baseResolution;
+    for(int i = 0; i < _baseResolution; i++) {
+      const float curAngle = phiDif * i;
+
+      const glm::vec3 position = glm::vec3{glm::cos(curAngle) * radius, glm::sin(curAngle) * radius, -_length};
+      mesh.vertices[i] = Mesh::Vertex{position, {1,1,1,1}};
+      mesh.indices[i * 2] = i;
+      mesh.indices[i * 2 + 1] = (i + 1) % _baseResolution;
+    }
+  } //Base
+  { //Apex
+    mesh.vertices[_baseResolution] = Mesh::Vertex{{0,0,0}, {1,1,1,1}};
+
+    const size_t indiceStart = _baseResolution * 2;
+    for(int i = 0; i < _apexResolution; i++) {
+      mesh.indices[indiceStart + i * 2] = _baseResolution;
+      mesh.indices[indiceStart + i * 2 + 1] = i * (_baseResolution / _apexResolution);
+    }
+  } //Apex
 
   return mesh;
 }

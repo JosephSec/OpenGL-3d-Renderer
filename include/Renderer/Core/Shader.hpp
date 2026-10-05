@@ -54,5 +54,7 @@ namespace Renderer {
     static GLuint CompileShader(GLenum _type, const char *_src);
 
     static GLint tryGetUniformLocation(GLuint _program, const std::string &_name);
+
+    static bool ValidateShaderProgram(GLuint _program);
   };
 }
