@@ -1,4 +1,4 @@
-#include <UI.hpp>
+#include <UI/Core.hpp>
 using namespace UI;
 
 #include <System.hpp>
@@ -19,25 +19,34 @@ void SmoothRect::draw() const {
   Core::smoothRectShader.SetUniform("radius", radius);
   Core::smoothRectShader.SetUniform("color", color);
 
-  Renderer::Core::window->draw(shape);
+  Core::window->draw(shape);
   Renderer::Core::SetShader(0);
 }
 
 
+void SmoothButton::draw() const {
+  SmoothRect::draw();
+
+  sf::Text text(Core::font);
+  text.setString("Hierarchy");
+  text.setCharacterSize(15);
+  const sf::FloatRect localBounds = text.getLocalBounds();
+  text.setPosition(position + (size - localBounds.size) / 2.0f - localBounds.position);
+  Core::window->draw(text);
+}
+
+
+
+sf::RenderWindow *Core::window;
+sf::Font Core::font;
 
 Renderer::Shader Core::smoothRectShader;
 
-//private
-sf::RenderWindow *Core::m_window;
-
-sf::Font Core::m_font;
-//private
-
 
 void Core::init(sf::RenderWindow *_window, const std::string &_font) {
-  m_window = _window;
+  window = _window;
 
-  if(m_font.openFromFile(System::PATH+"/assets/" + _font) == false) {
+  if(font.openFromFile(System::PATH+"/assets/" + _font) == false) {
     std::cout << "[UI Error]: Font file was not found or could not be opened\n";
   }
 
@@ -54,17 +63,8 @@ void Core::draw() {
   SmoothRect hierarchyArea = SmoothRect({{0,0}, sf::Vector2f{300,static_cast<float>(Renderer::Core::windowSize.y)}}, 15, {.05,.05,.05, 1});
   hierarchyArea.draw();
 
-  sf::Text text(m_font);
-
-  { //Hierarchy Button
-    SmoothRect textArea = SmoothRect({{10,10}, {75,25}}, 5, {.3,.3,.3,1});
-    textArea.draw();
-
-    text.setString("Hierarchy");
-    text.setCharacterSize(15);
-    text.setPosition(sf::Vector2f{15,15 - text.getLocalBounds().position.y});
-    m_window->draw(text);
-  }
+  SmoothButton hierarchyButton(sf::FloatRect{{10,10}, {75,25}}, 5, {.3,.3,.3,1}, "Hierarchy", 15);
+  hierarchyButton.draw();
 
   { //List
     const sf::Vector2f start = {10, 10 + 25 + 10};

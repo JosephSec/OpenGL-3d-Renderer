@@ -13,7 +13,7 @@ Light::Light(
 
 void Light::drawGizmoTexture(GLuint _texture) const {
   Mesh textureMesh = MeshHelper::GenerateQuad();
-  MeshHelper::RandomizeMeshColors(textureMesh, {glm::vec4{color,1}});
+  MeshHelper::SetMeshColor(textureMesh, color);
 
   MeshRenderer textureRenderer(&textureMesh, Core::GetShader("Unlit"));
   textureRenderer.backFaceCulling = false;
@@ -42,7 +42,7 @@ void PointLight::setUniforms(Shader *_shader, unsigned int _index) const {
 }
 void PointLight::drawGizmos() const {
   Mesh mesh = MeshHelper::GenerateWireSphere(16, radius);
-  MeshHelper::RandomizeMeshColors(mesh, {glm::vec4{color,1}});
+  MeshHelper::SetMeshColor(mesh, color);
   MeshRenderer renderer(&mesh, Core::GetShader("Unlit"));
   renderer.draw(Transform(position).getMatrix());
   
@@ -62,7 +62,7 @@ void DirectionalLight::setUniforms(Shader *_shader, unsigned int _index) const {
   _shader->SetUniform(prefix+"direction", direction);
 }
 void DirectionalLight::drawGizmos() const {
-  Mesh mesh(MeshType::Lines);
+  Mesh mesh(GL_LINES);
   mesh.vertices = {
     Mesh::Vertex{{0,0,0}, glm::vec4{color, 1}},
     Mesh::Vertex{glm::normalize(direction), glm::vec4{color, 1}},
@@ -99,7 +99,7 @@ void SpotLight::setUniforms(Shader *_shader, unsigned int _index) const {
 }
 void SpotLight::drawGizmos() const {
   Mesh mesh = MeshHelper::GenerateWireCone(16, 4, outerCutOff, radius);
-  MeshHelper::RandomizeMeshColors(mesh, {glm::vec4{color,1}});
+  MeshHelper::SetMeshColor(mesh, color);
   MeshRenderer renderer(&mesh, Core::GetShader("Unlit"));
   renderer.draw(Transform(position, glm::quatLookAt(glm::normalize(direction), {0,1,0})).getMatrix());
   

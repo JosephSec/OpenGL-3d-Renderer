@@ -170,17 +170,7 @@ void MeshRenderer::draw(const glm::mat4x4 &_matrix) const {
 
   glBindVertexArray(m_vao);
 
-  int drawType = GL_TRIANGLES;
-  switch(m_mesh->type) {
-    case MeshType::LitTriangle:
-      drawType = GL_TRIANGLES;
-      break;
-    case MeshType::Lines:
-      drawType = GL_LINES;
-      break;
-  }
-
-  glDrawElements(drawType, m_mesh->indices.size(), GL_UNSIGNED_INT, 0);
+  glDrawElements(m_mesh->type, m_mesh->indices.size(), GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);
@@ -213,17 +203,7 @@ void MeshRenderer::drawInstanced() const {
 
   glBindVertexArray(m_vao);
 
-  int drawType = GL_TRIANGLES;
-  switch(m_mesh->type) {
-    case MeshType::LitTriangle:
-      drawType = GL_TRIANGLES;
-      break;
-    case MeshType::Lines:
-      drawType = GL_LINES;
-      break;
-  }
-
-  glDrawElementsInstanced(drawType, m_mesh->indices.size(), GL_UNSIGNED_INT, 0, m_instanceCount);
+  glDrawElementsInstanced(m_mesh->type, m_mesh->indices.size(), GL_UNSIGNED_INT, 0, m_instanceCount);
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);

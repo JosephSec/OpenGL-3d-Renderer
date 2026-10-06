@@ -2,7 +2,7 @@
 #include <User.hpp>
 #include <EditorCamera.hpp>
 #include <TestScene.hpp>
-#include <UI.hpp>
+#include <UI/Core.hpp>
 
 #include <Renderer/Core.hpp>
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
         Renderer::Core::ToggleWireframeMode(false);
 
         if(System::ShowMeshNormals && TestScene::meshes.empty() == false) {
-          Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmos(TestScene::meshes[0], {0,0,1,1});
+          Renderer::Mesh normalMesh = Renderer::MeshHelper::GenerateNormalGizmo(TestScene::meshes[0], {0,0,1,1}, -1);
           Renderer::MeshRenderer normalRenderer(&normalMesh, Renderer::Core::GetShader("Unlit"));
           normalRenderer.draw(Renderer::Transform(glm::vec3(0), glm::quat(), glm::vec3(.5f)).getMatrix());
         }

@@ -2,5 +2,5 @@
 using namespace Renderer;
 
 
-Mesh::Mesh(MeshType _type) : type(_type) {}
+Mesh::Mesh(GLenum _type) : type(_type) {}
 Mesh::~Mesh() {}

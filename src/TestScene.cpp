@@ -121,7 +121,7 @@ void TestScene::init() {
   { //Init Sphere Particle System
     sphereParticleSystem = Renderer::ParticleSystem(Renderer::Transform(glm::vec3(-5,0,-5)), particleTexture);
     Renderer::Mesh mesh = Renderer::MeshHelper::GenerateQuad();
-    Renderer::MeshHelper::RandomizeMeshColors(mesh, {{0,1,0,1}});
+    Renderer::MeshHelper::SetMeshColor(mesh, {0,1,0,1});
     sphereParticleSystem.setMesh(mesh);
     sphereParticleSystem.setShader(Renderer::Core::GetShader("Unlit"));
     // sphereParticleSystem.gravity = glm::vec3(0);

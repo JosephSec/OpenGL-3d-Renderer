@@ -13,10 +13,6 @@
 
 
 namespace Renderer {
-  enum MeshType : uint8_t {
-    LitTriangle,
-    Lines,
-  };
   class HORDE3D_API Mesh {
   public:
     struct Vertex {
@@ -27,16 +23,20 @@ namespace Renderer {
       glm::vec2 uv = {0,0};
     };
     static constexpr uint16_t VERTEX_SIZE = sizeof(Vertex);
-    static constexpr uint16_t VERTEX_FLOAT_COUNT = sizeof(Vertex) / sizeof(float);
 
 
-    MeshType type = MeshType::LitTriangle;
+    Mesh(GLenum _type = GL_TRIANGLES);
+    ~Mesh();
+
+    template <typename F>
+    void editVertices(F &&fn) {
+      fn(vertices);
+    }
+
+
+    GLenum type = GL_TRIANGLES;
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    
-
-    Mesh(MeshType _type = MeshType::LitTriangle);
-    ~Mesh();
   };
 }

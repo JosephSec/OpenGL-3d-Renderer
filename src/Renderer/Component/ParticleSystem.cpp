@@ -12,7 +12,7 @@ using namespace Renderer;
 
 void BoxParticleEmitter::drawGizmos(const Renderer::Transform &_transform) const {
   Renderer::Mesh boxMesh = Renderer::MeshHelper::GenerateWireCube();
-  Renderer::MeshHelper::RandomizeMeshColors(boxMesh, {{0,1,0,1}});
+  Renderer::MeshHelper::SetMeshColor(boxMesh, {0,1,0,1});
 
   Renderer::MeshRenderer boxRenderer(&boxMesh, Renderer::Core::GetShader("Unlit"));
   boxRenderer.draw(Renderer::Transform(_transform.position, _transform.rotation, area).getMatrix());
@@ -33,7 +33,7 @@ Particle BoxParticleEmitter::getNewParticle() const {
 
 void SphereParticleEmitter::drawGizmos(const Renderer::Transform &_transform) const {
   Renderer::Mesh sphereMesh = Renderer::MeshHelper::GenerateWireSphere(16, radius);
-  Renderer::MeshHelper::RandomizeMeshColors(sphereMesh, {{0,1,0,1}});
+  Renderer::MeshHelper::SetMeshColor(sphereMesh, {0,1,0,1});
 
   Renderer::MeshRenderer sphereRenderer(&sphereMesh, Renderer::Core::GetShader("Unlit"));
   sphereRenderer.draw(Renderer::Transform(_transform.position, _transform.rotation, glm::vec3(1)).getMatrix());

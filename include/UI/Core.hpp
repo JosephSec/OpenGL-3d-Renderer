@@ -18,6 +18,21 @@ namespace UI {
     float radius = 15;
     glm::vec4 color = {.05,.05,.05, 1};
   };
+  struct SmoothButton : public SmoothRect {
+  public:
+    SmoothButton(
+      const sf::FloatRect _rect,
+      float _radius,
+      const glm::vec4 _color,
+      const std::string &_str,
+      unsigned int _fontSize = 15
+    ) : SmoothRect(_rect, _radius, _color), str(_str) {}
+
+    void draw() const;
+
+    
+    std::string str;
+  };
 
   class Core {
   public:
@@ -25,11 +40,10 @@ namespace UI {
     static void update();
     static void draw();
 
+
+    static sf::RenderWindow *window;
+    static sf::Font font;
+
     static Renderer::Shader smoothRectShader;
-
-  private:
-    static sf::RenderWindow *m_window;
-
-    static sf::Font m_font;
   };
 }
