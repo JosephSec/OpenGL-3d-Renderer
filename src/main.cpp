@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
         Renderer::Core::ToggleWireframeMode(prevWireFrameState);
       }
 
-      UI::Core::draw();
+      // UI::Core::draw();
 
       Renderer::Core::display();
     }

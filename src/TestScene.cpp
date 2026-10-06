@@ -33,12 +33,12 @@ void TestScene::init() {
     // new Renderer::PointLight{{0,0,0}, {1,1,0}, 1.0f, 15.0f},
     // new Renderer::PointLight{{0,0,0}, {1,0,1}, 1.0f, 15.0f},
     // new Renderer::PointLight{{0,0,0}, {0,1,1}, 1.0f, 15.0f},{0.55f, 0.62f, 0.67f}
-    new Renderer::DirectionalLight{{0,15,0}, {.55f,.62f,.67f}, 1.0f},
+    new Renderer::DirectionalLight{{0,5,0}, {.55f,.62f,.67f}, 1.0f},
     new Renderer::SpotLight{{0,-4.5,0}, {1,0,0}, 5.0f, 15, {0,0,-1}, 15, 45},
   };
   Renderer::Core::UpdateDynamicLighting();
 
-
+ 
   if constexpr(false) { //Load Dragon
     Renderer::Mesh mesh;
     Renderer::MeshHelper::LoadMeshObj(mesh, std::filesystem::path(System::PATH)/"assets/meshes/dragon.obj");
