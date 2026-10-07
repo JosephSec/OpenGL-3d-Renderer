@@ -13,11 +13,6 @@
         "-o", "${workspaceFolder}/build/program.exe",
         
         "${workspaceFolder}/src/Renderer/*.cpp",
-        "${workspaceFolder}/src/Renderer/Core/*.cpp",
-        "${workspaceFolder}/src/Renderer/Component/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
-        
-        "${workspaceFolder}/src/UI/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
@@ -28,7 +23,7 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DHORDE3D_DLL",
+        "-DRENDER3D_DLL",
 
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
@@ -36,9 +31,7 @@
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
-        "${workspaceFolder}/src/UI/*.cpp",
-        
-        "${workspaceFolder}/bin/horde3d.dll",
+        "${workspaceFolder}/bin/render3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
       ],
@@ -49,7 +42,7 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DHORDE3D_DLL",
+        "-DRENDER3D_DLL",
 
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
@@ -57,9 +50,7 @@
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
         
-        "${workspaceFolder}/src/UI/*.cpp",
-        
-        "${workspaceFolder}/bin/horde3d.dll",
+        "${workspaceFolder}/bin/render3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
       ],
@@ -69,30 +60,18 @@
       "type": "shell",
       "command": "g++",
       "args": [
-        "-DHORDE3D_DLL_BUILD",
+        "-DRENDER3D_DLL_BUILD",
 
         "-I${workspaceFolder}/include",
         
         "-O3", "-flto",
-        "-shared", "-o", "${workspaceFolder}/bin/horde3d.dll",
+        "-shared", "-o", "${workspaceFolder}/bin/render3d.dll",
 
-        "${workspaceFolder}/src/Renderer/*.cpp",
-        "${workspaceFolder}/src/Renderer/Core/*.cpp",
-        "${workspaceFolder}/src/Renderer/Component/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
+        // "${workspaceFolder}/src/Renderer/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
       ],
-    },
-    {
-      "label": "Publish Engine Files",
-      "type": "shell",
-      "command": "${workspaceFolder}/assets/UpdateGlobalFiles.bat",
-      "args": [
-        "horde3d", "Engine"
-      ],
-      "dependsOn": ["Compile DLL"]
     },
     {
       "label": "Import Tool",

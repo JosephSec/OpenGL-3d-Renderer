@@ -1,11 +1,11 @@
 #include <System.hpp>
 
+#include <SFML/System/Time.hpp>
+
 #include <windows.h>
 #include <filesystem>
 
-#include <SFML/System/Time.hpp>
-
-#include <Renderer/Core.hpp>
+#include <Renderer/Shader.hpp>
 
 
 std::string System::PATH;
@@ -13,19 +13,14 @@ std::string System::PATH;
 sf::Clock System::timeClock;
 float System::deltaTime;
 
-bool System::ShowMeshNormals = false;
-bool System::ShowLightGizmos = true;
-bool System::ShowParticleGizmos = true;
-
 
 void System::init() {
   char buffer[MAX_PATH];
   GetModuleFileNameA(NULL, buffer, MAX_PATH);
   PATH = std::filesystem::path(buffer).parent_path().parent_path().string();
 
-  Renderer::Shader::SetShaderFolder(std::filesystem::path(PATH)/"assets"/"shaders");
+  Renderer::Shader::SetShaderFolder(std::filesystem::path(PATH+"/assets"));
 }
 void System::update() {
   deltaTime = timeClock.restart().asSeconds();
-  Renderer::Core::deltaTime = deltaTime;
 }
