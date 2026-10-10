@@ -5,9 +5,11 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <Renderer/Core/API.hpp>
+
 
 namespace Renderer {
-  class Transform {
+  class RENDER3D_API Transform {
   public:
     static glm::quat LookAtRotation(const glm::vec3 _start, const glm::vec3 _end, const glm::vec3 _up);
 
@@ -19,7 +21,9 @@ namespace Renderer {
       const glm::vec3 _scale = glm::vec3(1)
     );
 
-    glm::mat4x4 getMatrix() const noexcept;
+    glm::mat4x4 getModelMatrix() const noexcept;
+    glm::mat4x4 getViewMatrix() const noexcept;
+    glm::mat4x4 getProjectionMatrix(const glm::ivec2 _windowSize, float _fov, float _near, float _far) const noexcept;
 
     inline glm::quat lookAtRotation(const glm::vec3 _target, const glm::vec3 _up) const noexcept {
       return LookAtRotation(position, _target, _up);

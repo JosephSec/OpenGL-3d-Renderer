@@ -1,4 +1,4 @@
-#include <Renderer/Transform.hpp>
+#include <Renderer/Component/Transform.hpp>
 using namespace Renderer;
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -21,11 +21,20 @@ Transform::Transform(
   const glm::vec3 _scale
 ) : position(_pos), rotation(_rotation), scale(_scale) {}
 
-glm::mat4x4 Transform::getMatrix() const noexcept {
+glm::mat4x4 Transform::getModelMatrix() const noexcept {
   return
     glm::translate(glm::mat4x4(1), position) *
     glm::mat4_cast(rotation) *
     glm::scale(glm::mat4x4(1), scale);
+}
+glm::mat4x4 Transform::getViewMatrix() const noexcept {
+  const glm::mat4x4 rotationMatrix = glm::mat4_cast(glm::conjugate(rotation));
+  const glm::mat4x4 translationMatrix = glm::translate(glm::mat4x4(1), -position);
+  return rotationMatrix * translationMatrix;
+}
+glm::mat4x4 Transform::getProjectionMatrix(const glm::ivec2 _windowSize, float _fov, float _near, float _far) const noexcept {
+  const float aspectRatio = static_cast<float>(_windowSize.x) / static_cast<float>(_windowSize.y);
+  return glm::perspective(glm::radians(_fov), aspectRatio, _near, _far);
 }
 
 glm::vec3 Transform::right() const noexcept {

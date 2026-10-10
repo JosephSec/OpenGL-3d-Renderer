@@ -25,7 +25,12 @@ public:
   };
 
 
+  static bool panningControl;
+  static bool flyThroughControl;
+
+
   static void init();
+  static void update();
 
   static void HandleFocusLost();
   static void HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed);

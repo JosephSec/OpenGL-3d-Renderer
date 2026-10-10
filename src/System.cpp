@@ -19,7 +19,7 @@ void System::init() {
   GetModuleFileNameA(NULL, buffer, MAX_PATH);
   PATH = std::filesystem::path(buffer).parent_path().parent_path().string();
 
-  Renderer::Shader::SetShaderFolder(std::filesystem::path(PATH+"/assets"));
+  Renderer::Shader::SetShaderFolder(std::filesystem::path(PATH+"/assets/shaders"));
 }
 void System::update() {
   deltaTime = timeClock.restart().asSeconds();
