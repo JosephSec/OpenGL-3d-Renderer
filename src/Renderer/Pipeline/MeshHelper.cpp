@@ -305,7 +305,7 @@ void MeshHelper::CalculateFlatNormals(Mesh &_mesh) {
     const float lenSq = glm::dot(cross, cross);
     const glm::vec3 normal = lenSq > 1e-12f ? cross / glm::sqrt(lenSq) : glm::vec3(0, 1, 0);
 
-    a.normal = b.normal = c.normal = normal;
+    a.normal = b.normal = c.normal = -normal;
 
     const unsigned int base = static_cast<unsigned int>(outVertices.size());
     outVertices.push_back(a);

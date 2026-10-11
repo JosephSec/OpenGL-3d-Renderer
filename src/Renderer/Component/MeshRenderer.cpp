@@ -11,6 +11,8 @@ MeshRenderer::MeshRenderer(Mesh *_mesh, const Shader *_shader) {
 void MeshRenderer::draw(const glm::mat4x4 &_model) const noexcept {
   if(isDrawable() == false) return;
 
+  backFaceCulling? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+
   m_shader->use();
   m_shader->setUniform(m_isInstancedUniformLocation, m_isInstanced);
 

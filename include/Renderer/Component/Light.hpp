@@ -18,7 +18,7 @@ namespace Renderer {
     Light(LightType _type, const glm::vec3 _position = glm::vec3(0), const glm::vec4 _color = glm::vec4(1));
     virtual ~Light() = default;
 
-    virtual void setUniforms(Shader *_shader, unsigned int _index) const = 0;
+    virtual void setUniforms(const Shader *_shader, unsigned int _index) const = 0;
     // virtual void drawGizmos(const Shader *_shader) const = 0;
 
 
@@ -41,7 +41,7 @@ namespace Renderer {
       float _radius = 1
     );
 
-    void setUniforms(Shader *_shader, unsigned int _index) const override;
+    void setUniforms(const Shader *_shader, unsigned int _index) const override;
     // void drawGizmos(const Shader *_shader) const override;
 
 
@@ -58,7 +58,7 @@ namespace Renderer {
       const glm::vec3 _direction = glm::vec3(-1)
     );
 
-    void setUniforms(Shader *_shader, unsigned int _index) const override;
+    void setUniforms(const Shader *_shader, unsigned int _index) const override;
     // void drawGizmos(const Shader *_shader) const override;
 
 
@@ -78,7 +78,7 @@ namespace Renderer {
       float _outerCutOff = 45
     );
 
-    void setUniforms(Shader *_shader, unsigned int _index) const override;
+    void setUniforms(const Shader *_shader, unsigned int _index) const override;
     // void drawGizmos(const Shader *_shader) const override;
 
 

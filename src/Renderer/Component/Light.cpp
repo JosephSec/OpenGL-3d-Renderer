@@ -31,7 +31,7 @@ PointLight::PointLight(
   float _radius
 ) : Light(LightType::Point, _position, _color), radius(_radius) {}
 
-void PointLight::setUniforms(Shader *_shader, unsigned int _index) const {
+void PointLight::setUniforms(const Shader *_shader, unsigned int _index) const {
   const std::string prefix = "lights[" + std::to_string(_index) + "].";
   _shader->setUniform(prefix+"type", static_cast<int>(type));
   _shader->setUniform(prefix+"position", position);
@@ -56,7 +56,7 @@ DirectionalLight::DirectionalLight(
   const glm::vec3 _direction
 ) : Light(LightType::Directional, _position, _color), direction(_direction) {}
 
-void DirectionalLight::setUniforms(Shader *_shader, unsigned int _index) const {
+void DirectionalLight::setUniforms(const Shader *_shader, unsigned int _index) const {
   const std::string prefix = "lights[" + std::to_string(_index) + "].";
   _shader->setUniform(prefix+"type", static_cast<int>(type));
   _shader->setUniform(prefix+"color", color);
@@ -87,7 +87,7 @@ SpotLight::SpotLight(
   float _outerCutOff
 ) : Light(LightType::Spot, _position, _color), radius(_radius), direction(_direction), innerCutOff(_innerCutOff), outerCutOff(_outerCutOff) {}
 
-void SpotLight::setUniforms(Shader *_shader, unsigned int _index) const {
+void SpotLight::setUniforms(const Shader *_shader, unsigned int _index) const {
   const std::string prefix = "lights[" + std::to_string(_index) + "].";
   _shader->setUniform(prefix+"type", static_cast<int>(type));
   _shader->setUniform(prefix+"color", color);

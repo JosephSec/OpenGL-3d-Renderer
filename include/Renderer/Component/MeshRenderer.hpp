@@ -57,6 +57,9 @@ namespace Renderer {
     }
 
     bool isDrawable() const noexcept;
+    inline bool isInstanced() const noexcept {
+      return m_isInstanced;
+    }
 
 
     bool backFaceCulling = true;

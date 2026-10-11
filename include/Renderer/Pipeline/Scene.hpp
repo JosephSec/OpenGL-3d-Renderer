@@ -34,6 +34,8 @@ namespace Renderer {
 
     std::vector<Mesh> meshes;
     std::vector<SceneObject> objects;
+
+    glm::vec4 ambientLighting = glm::vec4(0);
     std::vector<Light*> lights;
   };
 }

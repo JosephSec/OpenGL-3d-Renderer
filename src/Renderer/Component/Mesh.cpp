@@ -115,6 +115,7 @@ void Mesh::setIndices(const std::vector<unsigned int> &_vec) {
 
   glNamedBufferData(m_indicesEBO, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
 }
+
 void Mesh::setInstances(const std::vector<glm::mat4x4> &_vec) {
   m_instances = std::move(_vec);
   m_instanceCount = m_instances.size();
@@ -124,6 +125,7 @@ void Mesh::setInstances(const std::vector<glm::mat4x4> &_vec) {
       glVertexArrayVertexBuffer(m_vao, INSTANCE_VBO_BINDING_INDEX, 0, 0, sizeof(glm::mat4x4));
       glDeleteBuffers(1, &m_instanceVBO);
       m_instanceVBO = 0;
+      m_instanceCapacity = 0;
 
       for(int i = 0; i < 4; i++) glDisableVertexArrayAttrib(m_vao, 4 + i);
     }
@@ -137,7 +139,13 @@ void Mesh::setInstances(const std::vector<glm::mat4x4> &_vec) {
     for(int i = 0; i < 4; i++) glEnableVertexArrayAttrib(m_vao, 4 + i);
   }
 
-  glNamedBufferData(m_instanceVBO, _vec.size() * sizeof(glm::mat4x4), m_instances.data(), GL_DYNAMIC_DRAW);
+  const GLsizeiptr bytes = static_cast<GLsizeiptr>(m_instances.size() * sizeof(glm::mat4x4));
+
+  if(m_instances.size() > m_instanceCapacity) {
+    glNamedBufferData(m_instanceVBO, m_instances.size() * sizeof(glm::mat4x4), m_instances.data(), GL_DYNAMIC_DRAW);
+    m_instanceCapacity = m_instances.size();
+  }
+  else glNamedBufferSubData(m_instanceVBO, 0, bytes, m_instances.data());
 }
 
 

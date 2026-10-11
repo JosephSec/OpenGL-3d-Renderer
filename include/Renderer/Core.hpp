@@ -8,6 +8,9 @@
 
 #include <Renderer/Component/Camera.hpp>
 #include <Renderer/Component/MeshRenderer.hpp>
+#include <Renderer/Component/Light.hpp>
+
+#include <Renderer/Pipeline/Scene.hpp>
 
 
 namespace Renderer {
@@ -43,6 +46,9 @@ namespace Renderer {
     static void UpdateProjectionMatrix();
     static void UpdateViewMatrix();
 
+    static void UpdateDynamicLighting(const Shader *_shader, const Scene &_scene);
+
+
     static void QueueDraw(const MeshRenderer *_meshRenderer, const Transform &_transform, uint8_t _pass);
     static void ExecuteDrawCommands();
 
@@ -55,6 +61,7 @@ namespace Renderer {
     struct ShaderRenderUniforms {
     public:
       const Shader *shader;
+
       Shader::UniformLocation projLocation;
       Shader::UniformLocation viewLocation;
       Shader::UniformLocation windowSizeLocation;

@@ -49,9 +49,10 @@ namespace Renderer {
     }
 
 
-    void setVertices(const std::vector<Vertex> &_vec); //uses std::move, _vec will be made invalid
-    void setIndices(const std::vector<unsigned int> &_vec); //uses std::move, _vec will be made invalid
-    void setInstances(const std::vector<glm::mat4x4> &_vec); //uses std::move, _vec will be made invalid
+    void setVertices(const std::vector<Vertex> &_vec);
+    void setIndices(const std::vector<unsigned int> &_vec);
+    void setInstances(const std::vector<glm::mat4x4> &_vec);
+    
 
 
     inline uint16_t getID() const noexcept {
@@ -85,12 +86,13 @@ namespace Renderer {
     std::vector<unsigned int> m_indices;
     GLsizei m_indexCount = 0;
 
-    GLuint m_vao = 0;
+    GLuint m_vao         = 0;
     GLuint m_verticesVBO = 0;
     GLuint m_indicesEBO  = 0;
 
     std::vector<glm::mat4x4> m_instances;
-    GLsizei m_instanceCount = 0;
-    GLuint m_instanceVBO = 0;
+    GLsizei m_instanceCount    = 0;
+    GLsizei m_instanceCapacity = 0;
+    GLuint  m_instanceVBO      = 0;
   };
 }

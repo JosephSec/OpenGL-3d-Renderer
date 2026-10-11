@@ -1,6 +1,8 @@
 #include <Renderer/Core.hpp>
 using namespace Renderer;
 
+#include <Renderer/Pipeline/Scene.hpp>
+
 
 sf::RenderWindow *Core::window;
 glm::ivec2 Core::windowSize;
@@ -70,6 +72,26 @@ void Core::UpdateViewMatrix() {
     _renderUniform.shader->setUniform(_renderUniform.viewLocation, viewMatrix);
   }
 }
+
+void Core::UpdateDynamicLighting(const Shader *_shader, const Scene &_scene) {
+  const size_t lightCount = _scene.lights.size();
+
+  _shader->use();
+  _shader->setUniform("uAmbientLight", _scene.ambientLighting);
+  
+  _shader->setUniform("uLightCount", static_cast<int>(lightCount));
+  for(size_t i = 0; i < lightCount; i++) {
+    _scene.lights[i]->setUniforms(_shader, i);
+  }
+
+  _shader->setUniform("uViewPoint", camera->transform.position);
+
+  _shader->setUniform("uMaterial.diffuseTex", 0);
+  _shader->setUniform("uMaterial.useDiffuseTex", false);
+  _shader->setUniform("uMaterial.baseColor", glm::vec3(1));
+  _shader->setUniform("uMaterial.surface", glm::vec2{0.5f,0.0f});
+}
+
 
 void Core::QueueDraw(const MeshRenderer *_meshRenderer, const Transform &_transform, uint8_t _pass) {
   s_drawCommands.push_back(_meshRenderer->getDrawCommand(_transform, _pass));

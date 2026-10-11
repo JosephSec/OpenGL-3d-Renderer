@@ -10,7 +10,8 @@ using namespace Renderer;
 
 
 void SceneObject::draw() const noexcept {
-  meshRenderer.draw();
+  if(meshRenderer.isInstanced() == true) meshRenderer.draw();
+  else meshRenderer.draw(transform.getModelMatrix());
 }
 
 bool SceneObject::SaveToFile(const std::filesystem::path &_path) const {
@@ -20,11 +21,14 @@ bool SceneObject::SaveToFile(const std::filesystem::path &_path) const {
     return false;
   }
 
-  const Mesh *mesh = meshRenderer.getMesh();
-  file.write(reinterpret_cast<const char*>(mesh), sizeof(mesh));
+  uint64_t meshAddress = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(meshRenderer.getMesh()));
+  file.write(reinterpret_cast<const char*>(meshAddress), sizeof(uint64_t));
 
-  const Shader *shader = meshRenderer.getShader();
-  file.write(reinterpret_cast<const char*>(shader), sizeof(shader));
+  const std::string shaderName = meshRenderer.getShader()->getName();
+  const size_t shaderNameSize = shaderName.size();
+
+  file.write(reinterpret_cast<const char*>(&shaderNameSize), sizeof(size_t));
+  file.write(shaderName.c_str(), shaderNameSize);
 
   file.write(reinterpret_cast<const char*>(&transform), sizeof(Transform));
 
@@ -39,11 +43,8 @@ void Scene::draw() const {
 }
 
 bool Scene::SaveToFolder(const std::filesystem::path &_path) const {
-  if(std::filesystem::exists(_path) == false) {
-    std::filesystem::create_directories(_path);
-  }
-
-  std::filesystem::remove_all(_path);
+  if(std::filesystem::exists(_path)) std::filesystem::remove_all(_path);
+  std::filesystem::create_directories(_path);
 
   std::ofstream file(_path/"scene.data", std::ios::binary);
   if(!file.is_open()) {
@@ -76,7 +77,7 @@ bool Scene::SaveToFolder(const std::filesystem::path &_path) const {
 
     file << '\n';
     for(size_t i = 0; i < objectCount; i++) {
-      objects[i].SaveToFile(objectsFolder/(objects[i].name + "object"));
+      objects[i].SaveToFile(objectsFolder/(objects[i].name + ".object"));
       file << objects[i].name << '\n';
     }
   } //Save Scene Objects
