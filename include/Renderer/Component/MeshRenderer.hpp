@@ -3,7 +3,7 @@
 #include <Renderer/Core/API.hpp>
 
 #include <Renderer/Component/Mesh.hpp>
-#include <Renderer/Shader.hpp>
+#include <Renderer/Core/Shader.hpp>
 #include <Renderer/Component/Transform.hpp>
 
 

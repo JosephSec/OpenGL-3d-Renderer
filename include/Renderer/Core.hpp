@@ -55,6 +55,9 @@ namespace Renderer {
     static void CacheRenderUniforms(const Shader *_shader);
 
     static void ToggleWireframeMode(bool _state = !s_wireframeMode);
+    static inline bool GetWireframeMode() {
+      return s_wireframeMode;
+    }
 
 
   private:

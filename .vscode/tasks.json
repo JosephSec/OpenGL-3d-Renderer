@@ -11,9 +11,11 @@
         
         "-O3", "-flto",
         "-o", "${workspaceFolder}/build/program.exe",
-        
+
         "${workspaceFolder}/src/Renderer/*.cpp",
+        "${workspaceFolder}/src/Renderer/Core/*.cpp",
         "${workspaceFolder}/src/Renderer/Component/*.cpp",
+        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
@@ -69,7 +71,7 @@
         "-shared", "-o", "${workspaceFolder}/bin/render3d.dll",
 
         "${workspaceFolder}/src/Renderer/*.cpp",
-        // "${workspaceFolder}/src/Renderer/Core/*.cpp",
+        "${workspaceFolder}/src/Renderer/Core/*.cpp",
         "${workspaceFolder}/src/Renderer/Component/*.cpp",
         "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         

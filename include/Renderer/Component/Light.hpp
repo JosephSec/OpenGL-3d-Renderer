@@ -4,7 +4,7 @@
 #include <glm/vec4.hpp>
 
 #include <Renderer/Core/API.hpp>
-#include <Renderer/Shader.hpp>
+#include <Renderer/Core/Shader.hpp>
 
 
 namespace Renderer {

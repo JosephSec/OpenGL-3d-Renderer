@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <filesystem>
 
-#include <Renderer/Shader.hpp>
+#include <Renderer/Core/Shader.hpp>
 
 
 std::string System::PATH;
