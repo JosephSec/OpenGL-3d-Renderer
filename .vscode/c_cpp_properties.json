@@ -10,7 +10,7 @@
                 "UNICODE",
                 "_UNICODE"
             ],
-            "cppStandard": "c++26",
+            "cppStandard": "c++23",
             "cStandard": "c23"
         }
     ],

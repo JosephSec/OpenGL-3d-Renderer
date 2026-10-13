@@ -8,8 +8,8 @@
       "args": [
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
-        
-        "-O3", "-flto", "-std=c++26",
+
+        "-O3", "-std=c++23",
         "-o", "${workspaceFolder}/build/program.exe",
 
         "${workspaceFolder}/src/Renderer/*.cpp",
@@ -30,10 +30,10 @@
 
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
-        
-        "-O3", "-flto", "-std=c++26",
+
+        "-O3", "-std=c++23",
         "-o", "${workspaceFolder}/build/program.exe",
-        
+
         "${workspaceFolder}/bin/render3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
@@ -50,7 +50,7 @@
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
         
-        "-O3", "-flto", "-std=c++26",
+        "-O3", "-std=c++23",
         "-o", "${workspaceFolder}/build/program.exe",
         
         "${workspaceFolder}/bin/render3d.dll",
@@ -67,7 +67,7 @@
 
         "-I${workspaceFolder}/include",
         
-        "-O3", "-flto", "-std=c++26",
+        "-O3", "-std=c++23",
         "-shared", "-o", "${workspaceFolder}/bin/render3d.dll",
 
         "${workspaceFolder}/src/Renderer/*.cpp",
@@ -78,6 +78,29 @@
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
       ],
+    },
+    {
+      "label": "Compile Exe (Static)",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-DSFML_STATIC", "-DGLEW_STATIC",
+
+        "-I${workspaceFolder}/include",
+        "${workspaceFolder}/src/*.cpp",
+
+        "-O3", "-std=c++23",
+        "-static",
+        "-o", "${workspaceFolder}/build/program.exe",
+
+        "${workspaceFolder}/src/Renderer/*.cpp",
+        "${workspaceFolder}/src/Renderer/Core/*.cpp",
+        "${workspaceFolder}/src/Renderer/Component/*.cpp",
+        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
+        
+        "-lsfml-graphics-s", "-lsfml-window-s", "-lsfml-system-s",
+        "-lglew32", "-lopengl32", "-lfreetype", "-lwinmm", "-lgdi32",
+      ]
     },
     {
       "label": "Import Tool",

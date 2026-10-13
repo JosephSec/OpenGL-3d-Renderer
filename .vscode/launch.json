@@ -40,6 +40,15 @@
         }
       ],
       "MIMode": "gdb"
-    }
+    },
+    {
+      "name": "Build (Static)",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/build/program.exe",
+      "externalConsole": true,
+      "preLaunchTask": "Compile Exe (Static)",
+    },
   ]
 }

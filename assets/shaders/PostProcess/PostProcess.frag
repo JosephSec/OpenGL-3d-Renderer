@@ -25,7 +25,7 @@ out vec4 fragColor;
 // =====================================================================
 //  SETTINGS
 // =====================================================================
-#define QUALITY 3   // 0 = fast, 1 = high, 2 = ultra
+#define QUALITY 0   // 0 = fast, 1 = high, 2 = ultra
 
 #if QUALITY == 0
   const int AO_SLICES = 3, AO_STEPS = 8,  SSR_RAYS = 1, SSR_STEPS = 48, GI_RAYS = 0, DOF_TAPS = 32, BLOOM_TAPS = 12;

@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
   Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
 
 
+  static bool doPost = true;
   while(Renderer::Core::window->isOpen()) {
     while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -90,7 +91,10 @@ int main(int argc, char *argv[]) {
       else if(const auto *resized = event.getIf<sf::Event::Resized>()) Renderer::Core::UpdateWindowSize();
       else if(event.is<sf::Event::FocusLost>()) User::HandleFocusLost();
 
-      else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) User::HandleKeyPressed(keyPressed);
+      else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        User::HandleKeyPressed(keyPressed);
+        if(keyPressed->code == sf::Keyboard::Key::Space) doPost = !doPost;
+      }
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
       else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
     }
@@ -113,7 +117,7 @@ int main(int argc, char *argv[]) {
 
     { //Render
       Renderer::Core::clear();
-      post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
+      if(doPost) post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
 
       skybox.draw(&skyboxShader);
 
@@ -142,7 +146,7 @@ int main(int argc, char *argv[]) {
 
       Renderer::Core::ExecuteDrawCommands();
 
-      post.end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);
+      if(doPost) post.end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);
       Renderer::Core::display();
     } //Render
   }

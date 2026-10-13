@@ -1,6 +1,3 @@
 @echo off
-
-for %%I in ("%~dp0..") do set "ParentPath=%%~fI"
-
-set PATH=%ParentPath%\bin;%PATH%
-program.exe
+set PATH=%~dp0\bin;%PATH%
+assets\program.exe
