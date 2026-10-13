@@ -33,21 +33,25 @@ void PostProcess::begin(int _w, int _h) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 void PostProcess::end(const Shader* _post, int _screenW, int _screenH) {
-  const bool wireframe_state = Renderer::Core::GetWireframeMode();
-  Renderer::Core::ToggleWireframeMode(false);
+  const GLint polygon_state = Renderer::Core::GetPolygonMode();
+  Renderer::Core::SetPolygonMode(GL_FILL);
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, _screenW, _screenH);
   glDisable(GL_DEPTH_TEST);
 
   _post->use();
-  _post->setUniform("uFrame", 0);
+
   m_color.bind(0);
+  m_depth.bind(1);
+  _post->setUniform("uColor", 0);
+  _post->setUniform("uDepth", 1);
+
   glBindVertexArray(m_vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 
   glEnable(GL_DEPTH_TEST);
-  Renderer::Core::ToggleWireframeMode(wireframe_state);
+  Renderer::Core::SetPolygonMode(polygon_state);
 }
 
 

@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
 
   Renderer::Camera *camera = new Renderer::Camera();
   Renderer::Core::camera = camera;
+  camera->transform = Renderer::Transform({-2,2,-2}, Renderer::Transform::LookAtRotation({-2,2,-2}, {0,0,0}, {0,1,0}));
 
   Renderer::Shader unlitShader("Unlit");
   Renderer::Core::CacheRenderUniforms(&unlitShader);
@@ -102,11 +103,12 @@ int main(int argc, char *argv[]) {
       timeSinceStart += System::deltaTime;
 
       postShader.use();
-      postShader.setUniform("uTime", timeSinceStart);
-      postShader.setUniform("uView", Renderer::Core::camera->getViewMatrix());
+            
       postShader.setUniform("uProj", Renderer::Core::camera->getProjectionMatrix(Renderer::Core::windowSize));
-      postShader.setUniform("uCameraWorldPos", Renderer::Core::camera->transform.position);
+      postShader.setUniform("uView", Renderer::Core::camera->getViewMatrix());
       postShader.setUniform("uViewSize", glm::vec2{Renderer::Core::windowSize});
+      postShader.setUniform("uTime", timeSinceStart);
+      postShader.setUniform("uCameraWorldPos", Renderer::Core::camera->transform.position);
     } //Update
 
     { //Render
@@ -118,7 +120,10 @@ int main(int argc, char *argv[]) {
       activeScene.draw();
 
       if(activeScene.lights.empty() == false) {
-        Renderer::Core::ClearDepth();
+        bool depth_mask_state = Renderer::Core::GetDepthMask();
+        bool depth_test_state = Renderer::Core::GetDepthTest();
+        Renderer::Core::SetDepthMask(false);
+        Renderer::Core::SetDepthTest(false);
 
         Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
         Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
@@ -130,6 +135,9 @@ int main(int argc, char *argv[]) {
 
           meshRenderer.draw(Renderer::Transform(light->position));
         }
+
+        Renderer::Core::SetDepthMask(depth_mask_state);
+        Renderer::Core::SetDepthTest(depth_test_state);
       }
 
       Renderer::Core::ExecuteDrawCommands();

@@ -9,7 +9,7 @@
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
         
-        "-O3", "-flto",
+        "-O3", "-flto", "-std=c++26",
         "-o", "${workspaceFolder}/build/program.exe",
 
         "${workspaceFolder}/src/Renderer/*.cpp",
@@ -31,7 +31,7 @@
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
         
-        "-O3", "-flto",
+        "-O3", "-flto", "-std=c++26",
         "-o", "${workspaceFolder}/build/program.exe",
         
         "${workspaceFolder}/bin/render3d.dll",
@@ -50,7 +50,7 @@
         "-I${workspaceFolder}/include",
         "${workspaceFolder}/src/*.cpp",
         
-        "-O3", "-flto",
+        "-O3", "-flto", "-std=c++26",
         "-o", "${workspaceFolder}/build/program.exe",
         
         "${workspaceFolder}/bin/render3d.dll",
@@ -67,7 +67,7 @@
 
         "-I${workspaceFolder}/include",
         
-        "-O3", "-flto",
+        "-O3", "-flto", "-std=c++26",
         "-shared", "-o", "${workspaceFolder}/bin/render3d.dll",
 
         "${workspaceFolder}/src/Renderer/*.cpp",

@@ -54,10 +54,14 @@ namespace Renderer {
 
     static void CacheRenderUniforms(const Shader *_shader);
 
-    static void ToggleWireframeMode(bool _state = !s_wireframeMode);
-    static inline bool GetWireframeMode() {
-      return s_wireframeMode;
-    }
+    static void SetPolygonMode(GLint _mode);
+    static GLint GetPolygonMode();
+
+    static void SetDepthMask(bool _mask);
+    static bool GetDepthMask();
+
+    static void SetDepthTest(bool _state);
+    static bool GetDepthTest();
 
 
   private:
@@ -74,8 +78,6 @@ namespace Renderer {
     static std::vector<DrawCommand> s_drawCommands;
 
     static std::vector<ShaderRenderUniforms> s_shaderRenderUniforms;
-
-    static bool s_wireframeMode;
 
 
     static glm::ivec2 GetWindowSize();

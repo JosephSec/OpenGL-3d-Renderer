@@ -136,9 +136,32 @@ void Core::CacheRenderUniforms(const Shader *_shader) {
   });
 }
 
-void Core::ToggleWireframeMode(bool _state) {
-  s_wireframeMode = _state;
-  glPolygonMode(GL_FRONT_AND_BACK, s_wireframeMode? GL_LINE : GL_FILL);
+void Core::SetPolygonMode(GLint _mode) {
+  glPolygonMode(GL_FRONT_AND_BACK, _mode);
+}
+GLint Core::GetPolygonMode() {
+  GLint mode[2];
+  glGetIntegerv(GL_POLYGON_MODE, mode);
+  return mode[0];
+}
+
+void Core::SetDepthMask(bool _mask) {
+  glDepthMask(_mask? GL_TRUE : GL_FALSE);
+}
+bool Core::GetDepthMask() {
+  GLboolean output;
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &output);
+  return output == GL_TRUE;
+}
+
+void Core::SetDepthTest(bool _state) {
+  if(_state) glEnable(GL_DEPTH_TEST);
+  else       glDisable(GL_DEPTH_TEST);
+}
+bool Core::GetDepthTest() {
+  GLboolean output;
+  glGetBooleanv(GL_DEPTH_TEST, &output);
+  return output == GL_TRUE;
 }
 
 
@@ -146,8 +169,6 @@ void Core::ToggleWireframeMode(bool _state) {
 std::vector<DrawCommand> Core::s_drawCommands;
 
 std::vector<Core::ShaderRenderUniforms> Core::s_shaderRenderUniforms;
-
-bool Core::s_wireframeMode = false;
 
 
 glm::ivec2 Core::GetWindowSize() {

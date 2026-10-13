@@ -109,7 +109,19 @@ void User::HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed) {
     }
   }
 
-  else if(_keyPressed->code == sf::Keyboard::Key::F1) Renderer::Core::ToggleWireframeMode();
+  else if(_keyPressed->code == sf::Keyboard::Key::F1) {
+    const GLint curPolygonMode = Renderer::Core::GetPolygonMode();
+    switch(curPolygonMode) {
+      case GL_FILL: {
+        Renderer::Core::SetPolygonMode(GL_LINE);
+        break;
+      }
+      case GL_LINE: {
+        Renderer::Core::SetPolygonMode(GL_FILL);
+        break;
+      }
+    }
+  }
   
   else if(_keyPressed->code == sf::Keyboard::Key::X) {
     std::stringstream ss;
