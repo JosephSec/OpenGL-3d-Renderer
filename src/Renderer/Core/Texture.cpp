@@ -6,7 +6,7 @@ using namespace Renderer;
 
 
 Texture::Texture(int _width, int _height, GLenum _internalFormat, int _levels)
-: m_width(_width), m_height(_height), m_levels(_levels) {
+: m_width(_width), m_height(_height), m_levels(_levels), m_internalFormat(_internalFormat) {
   glCreateTextures(GL_TEXTURE_2D, 1, &m_id);
   glTextureStorage2D(m_id, _levels, _internalFormat, _width, _height);
 

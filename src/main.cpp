@@ -13,15 +13,13 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
-
+#include <map>
 
 
 int main(int argc, char *argv[]) {
   System::init();
   Renderer::Core::init();
   Renderer::Core::window->setVerticalSyncEnabled(true);
-  // Renderer::Core::window->setFramerateLimit(60);
-  // Renderer::Core::SetClearColor({0,0,0,0});
 
   Renderer::Camera *camera = new Renderer::Camera();
   Renderer::Core::camera = camera;
@@ -38,7 +36,9 @@ int main(int argc, char *argv[]) {
 
 
   Renderer::Shader skyboxShader("Skybox");
-  Renderer::Skybox skybox(256);
+  Renderer::Skybox skybox;
+  Renderer::Skybox::SplitToFaces(System::PATH+"/assets/skyboxs/OvercastSunset");
+  skybox.loadFromFolder(System::PATH+"/assets/skyboxs/OvercastSunset");
 
   Renderer::PostProcess post(1920,1080);
   Renderer::Shader postShader("PostProcess");
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
 
 
-  static bool doPost = true;
+  static bool doPost = false;
   while(Renderer::Core::window->isOpen()) {
     while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -106,8 +106,7 @@ int main(int argc, char *argv[]) {
       static float timeSinceStart = 0;
       timeSinceStart += System::deltaTime;
 
-      postShader.use();
-            
+      postShader.use();            
       postShader.setUniform("uProj", Renderer::Core::camera->getProjectionMatrix(Renderer::Core::windowSize));
       postShader.setUniform("uView", Renderer::Core::camera->getViewMatrix());
       postShader.setUniform("uViewSize", glm::vec2{Renderer::Core::windowSize});
@@ -115,38 +114,56 @@ int main(int argc, char *argv[]) {
       postShader.setUniform("uCameraWorldPos", Renderer::Core::camera->transform.position);
     } //Update
 
-    { //Render
-      Renderer::Core::clear();
-      if(doPost) post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
+    { //Render      
+      Renderer::Core::SetState(Renderer::StateType::Scene); {
+        Renderer::Core::clear();
 
-      skybox.draw(&skyboxShader);
+        Renderer::StateCache::PushStates();
+        if(doPost) post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
 
-      activeScene.draw();
+        skybox.draw(&skyboxShader);
 
-      if(activeScene.lights.empty() == false) {
-        bool depth_mask_state = Renderer::Core::GetDepthMask();
-        bool depth_test_state = Renderer::Core::GetDepthTest();
-        Renderer::Core::SetDepthMask(false);
-        Renderer::Core::SetDepthTest(false);
+        activeScene.draw();
 
-        Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
-        Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
+        if(activeScene.lights.empty() == false) {
+          Renderer::StateCache::PushStates();
+          Renderer::Core::SetDepthFunc(GL_ALWAYS);
+          Renderer::StateCache::Invalidate();
 
-        for(const Renderer::Light *light : activeScene.lights) {
-          sphereMesh.editVertices([&](std::vector<Renderer::Vertex> &_vertices) {
-            for(Renderer::Vertex &vertex : _vertices) vertex.color = glm::vec4{glm::vec3{light->color}, 1};
-          });
+          Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
+          Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
 
-          meshRenderer.draw(Renderer::Transform(light->position));
+          for(const Renderer::Light *light : activeScene.lights) {
+            sphereMesh.editVertices([&](std::vector<Renderer::Vertex> &_vertices) {
+              for(Renderer::Vertex &vertex : _vertices) vertex.color = glm::vec4{glm::vec3{light->color}, 1};
+            });
+
+            meshRenderer.draw(Renderer::Transform(light->position));
+          }
+
+          Renderer::Core::SetDepthFunc(GL_LEQUAL);
+          Renderer::StateCache::PullStates();
         }
 
-        Renderer::Core::SetDepthMask(depth_mask_state);
-        Renderer::Core::SetDepthTest(depth_test_state);
+        Renderer::Core::ExecuteDrawCommands();
+
+        if(doPost) post.end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);      
+        Renderer::StateCache::PullStates();
       }
 
-      Renderer::Core::ExecuteDrawCommands();
+      // Renderer::Core::SetState(Renderer::StateType::UI); {
+      //   Renderer::StateCache::PushStates();
+      //   Renderer::Core::window->resetGLStates();
+      //   Renderer::StateCache::Invalidate();
 
-      if(doPost) post.end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);
+      //   sf::RectangleShape shape({25,25});
+      //   shape.setPosition({25,25});
+      //   shape.setFillColor(sf::Color::Red);
+      //   Renderer::Core::window->draw(shape);
+
+      //   Renderer::StateCache::PullStates();
+      // }
+
       Renderer::Core::display();
     } //Render
   }

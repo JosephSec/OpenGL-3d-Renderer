@@ -19,7 +19,7 @@ namespace Renderer {
     void begin(int _w, int _h);
     void end(const Shader* _post, int _screenW, int _screenH);
 
-  private:
+  // private:
     void attach();
 
     Texture m_color, m_depth;

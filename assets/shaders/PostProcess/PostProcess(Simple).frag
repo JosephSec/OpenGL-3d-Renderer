@@ -13,6 +13,6 @@ out vec4 fragColor;
 
 
 void main() {
-  vec3 color = texture(uDepth, vUV).rgb;
-  fragColor = vec4(color, 1.0);
+  vec3 color = texture(uColor, vUV).rgb;
+  fragColor = vec4(color, 1);
 }

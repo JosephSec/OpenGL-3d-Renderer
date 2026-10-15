@@ -7,7 +7,7 @@ using namespace Renderer;
 
 
 PostProcess::PostProcess(int _w, int _h)
-  : m_color(_w, _h, GL_RGBA8), m_depth(_w, _h, GL_DEPTH_COMPONENT24) {
+  : m_w(_w), m_h(_h), m_color(_w, _h, GL_RGBA8), m_depth(_w, _h, GL_DEPTH_COMPONENT24) {
   glCreateFramebuffers(1, &m_fbo);
   glCreateVertexArrays(1, &m_vao);
   attach();
@@ -29,12 +29,12 @@ void PostProcess::begin(int _w, int _h) {
   if(_w != m_w || _h != m_h) resize(_w, _h);
   glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
   glViewport(0, 0, _w, _h);
-  glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 void PostProcess::end(const Shader* _post, int _screenW, int _screenH) {
-  const GLint polygon_state = Renderer::Core::GetPolygonMode();
+  Renderer::StateCache::PushStates();
   Renderer::Core::SetPolygonMode(GL_FILL);
+  Renderer::StateCache::Invalidate();
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, _screenW, _screenH);
@@ -51,7 +51,7 @@ void PostProcess::end(const Shader* _post, int _screenW, int _screenH) {
   glDrawArrays(GL_TRIANGLES, 0, 3);
 
   glEnable(GL_DEPTH_TEST);
-  Renderer::Core::SetPolygonMode(polygon_state);
+  Renderer::StateCache::PullStates();
 }
 
 

@@ -42,7 +42,7 @@ uniform Light lights[MAX_LIGHTS];
 
 
 float GetLightAttenuation(Light light, vec3 lightDir) {
-  if(light.type == TYPE_DIRECTIONAL) return 1.0; //directional lights give max attenuation
+  if(light.type == TYPE_DIRECTIONAL) return 1.0;
 
   float dist = length(lightDir);
   return 1 - min(dist, light.radius) / light.radius;

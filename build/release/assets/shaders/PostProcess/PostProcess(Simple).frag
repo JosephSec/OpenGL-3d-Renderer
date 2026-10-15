@@ -14,5 +14,5 @@ out vec4 fragColor;
 
 void main() {
   vec3 color = texture(uColor, vUV).rgb;
-  fragColor = vec4(color, 1.0);
+  fragColor = vec4(color, 1);
 }

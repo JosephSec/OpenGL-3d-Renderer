@@ -25,67 +25,69 @@ out vec4 fragColor;
 // =====================================================================
 //  SETTINGS
 // =====================================================================
-#define QUALITY 0   // 0 = fast, 1 = high, 2 = ultra
+#define QUALITY 3   // 0 = fast, 1 = low, 2 = high, 3 = ultra
 
 #if QUALITY == 0
-  const int AO_SLICES = 3, AO_STEPS = 8,  SSR_RAYS = 1, SSR_STEPS = 48, GI_RAYS = 0, DOF_TAPS = 32, BLOOM_TAPS = 12;
+  const int AO_SLICES = 2, AO_STEPS = 4,  SSR_RAYS = 0, SSR_STEPS = 16, GI_RAYS = 0, DOF_TAPS = 12, BLOOM_TAPS = 4;
 #elif QUALITY == 1
-  const int AO_SLICES = 5, AO_STEPS = 12, SSR_RAYS = 2, SSR_STEPS = 64, GI_RAYS = 1, DOF_TAPS = 48, BLOOM_TAPS = 16;
+  const int AO_SLICES = 3, AO_STEPS = 6,  SSR_RAYS = 1, SSR_STEPS = 32, GI_RAYS = 1, DOF_TAPS = 24, BLOOM_TAPS = 8;
+#elif QUALITY == 2
+  const int AO_SLICES = 5, AO_STEPS = 12, SSR_RAYS = 2, SSR_STEPS = 64, GI_RAYS = 2, DOF_TAPS = 48, BLOOM_TAPS = 16;
 #else
-  const int AO_SLICES = 8, AO_STEPS = 16, SSR_RAYS = 4, SSR_STEPS = 96, GI_RAYS = 2, DOF_TAPS = 80, BLOOM_TAPS = 24;
+  const int AO_SLICES = 10, AO_STEPS = 24, SSR_RAYS = 4, SSR_STEPS = 128, GI_RAYS = 4, DOF_TAPS = 96, BLOOM_TAPS = 32;
 #endif
 
 // ---- colour pipeline ----
 const bool  SCENE_IS_LINEAR = false;  // true if your lit shader writes LINEAR light (no gamma applied)
 const bool  SCENE_IS_HDR    = false;  // true if m_color is GL_RGBA16F (values may exceed 1.0)
-const float LDR_HDR_BOOST   = 2.0;    // fakes highlight headroom when the target is 8-bit
+const float LDR_HDR_BOOST   = 1.6;    // fakes highlight headroom when the target is 8-bit
 const float EXPOSURE        = 1.0;
 const bool  ANIMATE_NOISE   = false;  // true = per-frame noise (use only if you add temporal accumulation)
 
 // ---- ambient occlusion (GTAO) ----
-const float AO_RADIUS       = 1.2;    // view-space units
-const float AO_MAX_PIXELS   = 300.0;  // screen-space radius cap; the radius shrinks instead of undersampling
+const float AO_RADIUS       = 1.0;    // view-space units
+const float AO_MAX_PIXELS   = 200.0;  // screen-space radius cap; the radius shrinks instead of undersampling
 const float AO_FALLOFF      = 0.6;    // fraction of the radius used to fade out occluders
-const float AO_POWER        = 1.6;
+const float AO_POWER        = 1.4;
 
 // ---- reflections ----
 const float SSR_F0          = 0.05;   // base reflectivity of non-metals
-const float SSR_ROUGHNESS   = 0.12;   // perceptual roughness (no material buffer, so global)
+const float SSR_ROUGHNESS   = 0.01;   // perceptual roughness (no material buffer, so global)
 const float SSR_MAX_DIST    = 40.0;
-const float SSR_THICKNESS   = 0.35;
-const vec3  ENV_COLOR       = vec3(0.03, 0.035, 0.04);   // what rays that leave the screen "see"
+const float SSR_THICKNESS   = 0.2;
+const vec3  ENV_COLOR       = vec3(0.05, 0.06, 0.08);   // what rays that leave the screen "see"
 
 // ---- screen-space GI (one diffuse bounce) ----
-const float GI_STRENGTH     = 0.6;
+const float GI_STRENGTH     = 0.45;
 const float GI_MAX_DIST     = 4.0;
-const int   GI_STEPS        = 24;
-const float GI_THICKNESS    = 0.5;
+const int   GI_STEPS        = 16;
+const float GI_THICKNESS    = 0.4;
 
 // ---- depth of field (thin-lens model, units = metres) ----
 const bool  AUTOFOCUS       = true;   // focus on whatever is at screen centre
 const float FOCUS_DISTANCE  = 4.0;    // used when AUTOFOCUS = false
 const float FOCAL_MM        = 35.0;
-const float F_STOP          = 2.0;    // lower = shallower depth of field
+const float F_STOP          = 2.8;    // lower = shallower depth of field
 const float SENSOR_MM       = 24.0;   // sensor height
-const float DOF_MAX_PX      = 28.0;   // max blur radius in pixels
+const float DOF_MAX_PX      = 16.0;   // max blur radius in pixels
 
 // ---- bloom ----
-const float BLOOM_AMOUNT    = 0.18;
-const float BLOOM_THRESH    = 1.0;
+const float BLOOM_AMOUNT    = 0.14;
+const float BLOOM_THRESH    = 0.9;
 const float BLOOM_KNEE      = 0.5;
 
 // ---- fog (exponential height fog, world units) ----
 const vec3  FOG_COLOR           = vec3(0.50, 0.58, 0.70);   // sRGB
-const float FOG_DENSITY         = 0.012;
+const float FOG_DENSITY         = 0.010;
 const float FOG_HEIGHT_FALLOFF  = 0.18;
 const float FOG_BASE_HEIGHT     = -5.0;
 
 // ---- lens / film / grade ----
-const float CA_AMOUNT       = 0.004;
-const float VIGNETTE        = 0.45;
-const float GRAIN           = 0.03;
-const float SATURATION      = 1.06;
-const float CONTRAST        = 0.25;
+const float CA_AMOUNT       = 0.0015;
+const float VIGNETTE        = 0.3;
+const float GRAIN           = 0.02;
+const float SATURATION      = 1.05;
+const float CONTRAST        = 0.15;
 
 // =====================================================================
 //  CONSTANTS / GLOBALS

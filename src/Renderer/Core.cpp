@@ -164,6 +164,46 @@ bool Core::GetDepthTest() {
   return output == GL_TRUE;
 }
 
+void Core::SetDepthFunc(GLenum _func) {
+  glDepthFunc(_func);
+}
+GLenum Core::GetDepthFunc() {
+  GLint output;
+  glGetIntegerv(GL_DEPTH_FUNC, &output);
+  return static_cast<GLenum>(output);
+}
+
+void Core::SetState(StateType _state) {
+  glUseProgram(0);
+  glBindVertexArray(0);
+
+  switch(_state) {
+    default:
+    case StateType::Scene: {
+      glDisableClientState(GL_VERTEX_ARRAY);
+      glDisableClientState(GL_COLOR_ARRAY);
+      glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+      SetState(StateBuffer::Scene());
+      break;
+    }
+    case StateType::UI: {
+      glEnableClientState(GL_VERTEX_ARRAY);
+      glEnableClientState(GL_COLOR_ARRAY);
+      glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+      SetState(StateBuffer::UI());
+      break;
+    }
+  }
+}
+void Core::SetState(const StateBuffer &_stateBuf) {
+  StateCache::Apply(_stateBuf);
+}
+
 
 //private
 std::vector<DrawCommand> Core::s_drawCommands;

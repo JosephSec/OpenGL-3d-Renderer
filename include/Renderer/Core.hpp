@@ -6,6 +6,8 @@
 
 #include <Renderer/Core/API.hpp>
 
+#include <Renderer/Core/States.hpp>
+
 #include <Renderer/Component/Camera.hpp>
 #include <Renderer/Component/MeshRenderer.hpp>
 #include <Renderer/Component/Light.hpp>
@@ -14,11 +16,6 @@
 
 
 namespace Renderer {
-  enum State {
-    World,
-    UI
-  };
-
   class RENDER3D_API Core {
   public:
     static sf::RenderWindow *window;
@@ -62,6 +59,12 @@ namespace Renderer {
 
     static void SetDepthTest(bool _state);
     static bool GetDepthTest();
+
+    static void SetDepthFunc(GLenum _func);
+    static GLenum GetDepthFunc();
+
+    static void SetState(StateType _state);
+    static void SetState(const StateBuffer &_stateBuf);
 
 
   private:
