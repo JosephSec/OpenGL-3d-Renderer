@@ -1,6 +1,25 @@
 #include <Renderer/Core/States.hpp>
 using namespace Renderer;
 
+#include <Renderer/Core.hpp>
+
+
+StateBuffer StateBuffer::Scene() {
+  StateBuffer scene;
+  scene.polygonMode = Core::GetScenePolygonMode();
+  return scene;
+}
+StateBuffer StateBuffer::UI() {
+  StateBuffer buf;
+  buf.depthTest   = false;
+  buf.depthWrite  = false;
+  buf.cull        = false;
+  buf.blend       = true;
+  buf.multisample = false;
+  return buf;
+}
+
+
 
 //private
 StateBuffer StateCache::m_curState;

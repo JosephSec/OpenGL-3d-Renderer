@@ -63,6 +63,7 @@ namespace Renderer {
 
 
     bool backFaceCulling = true;
+    bool castShadows = true;
     Material material;
 
 

@@ -34,7 +34,6 @@ void PostProcess::begin(int _w, int _h) {
 void PostProcess::end(const Shader* _post, int _screenW, int _screenH) {
   Renderer::StateCache::PushStates();
   Renderer::Core::SetPolygonMode(GL_FILL);
-  Renderer::StateCache::Invalidate();
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, _screenW, _screenH);

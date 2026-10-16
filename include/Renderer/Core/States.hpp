@@ -39,16 +39,8 @@ namespace Renderer {
     GLuint viewX = 0, viewY = 0, viewW = 0, viewH = 0;
 
 
-    static StateBuffer Scene() { return {}; }
-    static StateBuffer UI() {
-      StateBuffer buf;
-      buf.depthTest   = false;
-      buf.depthWrite  = false;
-      buf.cull        = false;
-      buf.blend       = true;
-      buf.multisample = false;
-      return buf;
-    }
+    static StateBuffer Scene();
+    static StateBuffer UI();
   };
 
   class RENDER3D_API StateCache {

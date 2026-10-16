@@ -110,14 +110,14 @@ void User::HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed) {
   }
 
   else if(_keyPressed->code == sf::Keyboard::Key::F1) {
-    const GLint curPolygonMode = Renderer::Core::GetPolygonMode();
+    const GLint curPolygonMode = Renderer::Core::GetScenePolygonMode();
     switch(curPolygonMode) {
       case GL_FILL: {
-        Renderer::Core::SetPolygonMode(GL_LINE);
+        Renderer::Core::SetScenePolygonMode(GL_LINE);
         break;
       }
       case GL_LINE: {
-        Renderer::Core::SetPolygonMode(GL_FILL);
+        Renderer::Core::SetScenePolygonMode(GL_FILL);
         break;
       }
     }

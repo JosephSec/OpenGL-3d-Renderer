@@ -10,6 +10,8 @@
 #include <Renderer/Component/MeshRenderer.hpp>
 #include <Renderer/Component/Light.hpp>
 
+#include <Renderer/Core/Shader.hpp>
+
 
 namespace Renderer {
   struct RENDER3D_API SceneObject {
@@ -27,7 +29,11 @@ namespace Renderer {
 
   class RENDER3D_API Scene {
   public:
+    Scene(int _shadowSize = 1024);
+
     void draw() const;
+    void drawShadows() const;
+
 
     bool SaveToFolder(const std::filesystem::path &_path) const;
 

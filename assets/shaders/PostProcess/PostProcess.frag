@@ -25,7 +25,7 @@ out vec4 fragColor;
 // =====================================================================
 //  SETTINGS
 // =====================================================================
-#define QUALITY 3   // 0 = fast, 1 = low, 2 = high, 3 = ultra
+#define QUALITY 1   // 0 = fast, 1 = low, 2 = high, 3 = ultra
 
 #if QUALITY == 0
   const int AO_SLICES = 2, AO_STEPS = 4,  SSR_RAYS = 0, SSR_STEPS = 16, GI_RAYS = 0, DOF_TAPS = 12, BLOOM_TAPS = 4;
@@ -51,7 +51,7 @@ const float AO_FALLOFF      = 0.6;    // fraction of the radius used to fade out
 const float AO_POWER        = 1.4;
 
 // ---- reflections ----
-const float SSR_F0          = 0.05;   // base reflectivity of non-metals
+const float SSR_F0          = 0.04;   // base reflectivity of non-metals
 const float SSR_ROUGHNESS   = 0.01;   // perceptual roughness (no material buffer, so global)
 const float SSR_MAX_DIST    = 40.0;
 const float SSR_THICKNESS   = 0.2;

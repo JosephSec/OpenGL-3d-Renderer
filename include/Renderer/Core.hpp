@@ -48,11 +48,15 @@ namespace Renderer {
 
     static void QueueDraw(const MeshRenderer *_meshRenderer, const Transform &_transform, uint8_t _pass);
     static void ExecuteDrawCommands();
+    static void ClearDrawCommands();
 
     static void CacheRenderUniforms(const Shader *_shader);
 
-    static void SetPolygonMode(GLint _mode);
-    static GLint GetPolygonMode();
+    static void SetScenePolygonMode(GLenum _mode);
+    static GLenum GetScenePolygonMode();
+
+    static void SetPolygonMode(GLenum _mode);
+    static GLenum GetPolygonMode();
 
     static void SetDepthMask(bool _mask);
     static bool GetDepthMask();
@@ -81,6 +85,8 @@ namespace Renderer {
     static std::vector<DrawCommand> s_drawCommands;
 
     static std::vector<ShaderRenderUniforms> s_shaderRenderUniforms;
+
+    static GLenum s_scenePolygonMode;
 
 
     static glm::ivec2 GetWindowSize();

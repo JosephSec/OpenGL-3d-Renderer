@@ -37,8 +37,8 @@ int main(int argc, char *argv[]) {
 
   Renderer::Shader skyboxShader("Skybox");
   Renderer::Skybox skybox;
-  Renderer::Skybox::SplitToFaces(System::PATH+"/assets/skyboxs/OvercastSunset");
-  skybox.loadFromFolder(System::PATH+"/assets/skyboxs/OvercastSunset");
+  Renderer::Skybox::SplitToFaces(System::PATH+"/assets/skyboxs/DimTwilight/cubemap.png");
+  skybox.loadFromFolder(System::PATH+"/assets/skyboxs/DimTwilight");
 
   Renderer::PostProcess post(1920,1080);
   Renderer::Shader postShader("PostProcess");
@@ -75,12 +75,44 @@ int main(int argc, char *argv[]) {
 
     activeScene.ambientLighting = {1,1,1, .01f};
     activeScene.lights = {
-      new Renderer::PointLight({2,2,-2}, {1,1,1,1}, 15),
+      new Renderer::PointLight({2,2,-2}, {1,0,0,1}, 15),
     };
   }
 
   Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
 
+
+  // ---- Point light shadows ----
+  constexpr int   SHADOW_SIZE = 1024;
+  constexpr float SHADOW_FAR  = 30.0f;     // must cover the farthest surface the light reaches
+  constexpr GLuint SHADOW_UNIT = 5;        // free unit (skybox uses 0, post uses 0 and 1)
+
+  Renderer::Shader shadowDepthShader("ShadowDepth");
+  Renderer::Core::CacheRenderUniforms(&shadowDepthShader);
+
+  Renderer::Cubemap shadowCube(SHADOW_SIZE, GL_DEPTH_COMPONENT32F, 1);
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);   // we compare distances ourselves
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glTextureParameteri(shadowCube.id(), GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
+  GLuint shadowFbo = 0;
+  glCreateFramebuffers(1, &shadowFbo);
+  glNamedFramebufferDrawBuffer(shadowFbo, GL_NONE);
+  glNamedFramebufferReadBuffer(shadowFbo, GL_NONE);
+
+  // Same meshes/transforms as the scene objects, but drawn with the depth shader
+  struct ShadowCaster { Renderer::MeshRenderer renderer; Renderer::Transform transform; };
+  std::vector<ShadowCaster> shadowCasters;
+  shadowCasters.push_back({Renderer::MeshRenderer(&activeScene.meshes[0], &shadowDepthShader), Renderer::Transform({0,0,0})});
+  shadowCasters.push_back({Renderer::MeshRenderer(&activeScene.meshes[1], &shadowDepthShader), Renderer::Transform({0,0,0}, glm::quat(), {10,10,10})});
+
+  // Standard cubemap face orientations (+X, -X, +Y, -Y, +Z, -Z)
+  const glm::vec3 faceDir[6] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+  const glm::vec3 faceUp [6] = {{0,-1,0},{0,-1,0},{0,0,1},{0,0,-1},{0,-1,0},{0,-1,0}};
+  
 
   static bool doPost = false;
   while(Renderer::Core::window->isOpen()) {
@@ -106,6 +138,9 @@ int main(int argc, char *argv[]) {
       static float timeSinceStart = 0;
       timeSinceStart += System::deltaTime;
 
+      activeScene.lights[0]->position = {glm::cos(timeSinceStart * .5f) * 2, glm::cos(timeSinceStart * .33f) * 2, glm::sin(timeSinceStart * .5f) * 2};
+      Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
+
       postShader.use();            
       postShader.setUniform("uProj", Renderer::Core::camera->getProjectionMatrix(Renderer::Core::windowSize));
       postShader.setUniform("uView", Renderer::Core::camera->getViewMatrix());
@@ -114,9 +149,51 @@ int main(int argc, char *argv[]) {
       postShader.setUniform("uCameraWorldPos", Renderer::Core::camera->transform.position);
     } //Update
 
-    { //Render      
+    { //Render
       Renderer::Core::SetState(Renderer::StateType::Scene); {
         Renderer::Core::clear();
+
+        // ---- Shadow pass (before post.begin, because that binds the post FBO) ----
+        if(!activeScene.lights.empty()) {
+          const glm::vec3 lightPos = activeScene.lights[0]->position;
+          const glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.05f, SHADOW_FAR);
+
+          Renderer::StateCache::PushStates();
+
+          glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo);
+          glViewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+          glDisable(GL_SCISSOR_TEST);
+          glEnable(GL_DEPTH_TEST);
+          glDepthFunc(GL_LESS);
+          glDepthMask(GL_TRUE);
+          Renderer::StateCache::Invalidate();      // raw GL above bypassed the cache
+
+          shadowDepthShader.use();
+          shadowDepthShader.setUniform("uLightPos", lightPos);
+          shadowDepthShader.setUniform("uShadowFar", SHADOW_FAR);
+
+          for(int f = 0; f < 6; f++) {
+            glNamedFramebufferTextureLayer(shadowFbo, GL_DEPTH_ATTACHMENT, shadowCube.id(), 0, f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            shadowDepthShader.setUniform("uLightSpace", proj * glm::lookAt(lightPos, lightPos + faceDir[f], faceUp[f]));
+            for(ShadowCaster &c : shadowCasters) c.renderer.draw(c.transform);
+            Renderer::Core::ExecuteDrawCommands();
+          }
+
+          glBindFramebuffer(GL_FRAMEBUFFER, 0);
+          glViewport(0, 0, Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
+          Renderer::StateCache::Invalidate();
+          Renderer::StateCache::PullStates();
+
+          // Feed the lit shader
+          shadowCube.bind(SHADOW_UNIT);
+          litShader.use();
+          litShader.setUniform("uShadowCube", (int)SHADOW_UNIT);
+          litShader.setUniform("uShadowLightPos", lightPos);
+          litShader.setUniform("uShadowFar", SHADOW_FAR);
+          litShader.setUniform("uHasShadow", true);
+        }
 
         Renderer::StateCache::PushStates();
         if(doPost) post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
@@ -151,18 +228,18 @@ int main(int argc, char *argv[]) {
         Renderer::StateCache::PullStates();
       }
 
-      // Renderer::Core::SetState(Renderer::StateType::UI); {
-      //   Renderer::StateCache::PushStates();
-      //   Renderer::Core::window->resetGLStates();
-      //   Renderer::StateCache::Invalidate();
+      Renderer::Core::SetState(Renderer::StateType::UI); {
+        Renderer::StateCache::PushStates();
+        Renderer::Core::window->resetGLStates();
+        Renderer::StateCache::Invalidate();
 
-      //   sf::RectangleShape shape({25,25});
-      //   shape.setPosition({25,25});
-      //   shape.setFillColor(sf::Color::Red);
-      //   Renderer::Core::window->draw(shape);
+        sf::RectangleShape shape({25,25});
+        shape.setPosition({25,25});
+        shape.setFillColor(sf::Color::Red);
+        Renderer::Core::window->draw(shape);
 
-      //   Renderer::StateCache::PullStates();
-      // }
+        Renderer::StateCache::PullStates();
+      }
 
       Renderer::Core::display();
     } //Render

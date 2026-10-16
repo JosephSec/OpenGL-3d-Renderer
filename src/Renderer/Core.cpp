@@ -123,7 +123,8 @@ void Core::ExecuteDrawCommands() {
     shader->setUniform(drawCommand.modelLoc, drawCommand.model);
     mesh->draw();
   }
-
+}
+void Core::ClearDrawCommands() {
   s_drawCommands.clear();
 }
 
@@ -136,10 +137,18 @@ void Core::CacheRenderUniforms(const Shader *_shader) {
   });
 }
 
-void Core::SetPolygonMode(GLint _mode) {
-  glPolygonMode(GL_FRONT_AND_BACK, _mode);
+void Core::SetScenePolygonMode(GLenum _mode) {
+  s_scenePolygonMode = _mode;
 }
-GLint Core::GetPolygonMode() {
+GLenum Core::GetScenePolygonMode() {
+  return s_scenePolygonMode;
+}
+
+void Core::SetPolygonMode(GLenum _mode) {
+  glPolygonMode(GL_FRONT_AND_BACK, _mode);
+  StateCache::Invalidate();
+}
+GLenum Core::GetPolygonMode() {
   GLint mode[2];
   glGetIntegerv(GL_POLYGON_MODE, mode);
   return mode[0];
@@ -147,6 +156,7 @@ GLint Core::GetPolygonMode() {
 
 void Core::SetDepthMask(bool _mask) {
   glDepthMask(_mask? GL_TRUE : GL_FALSE);
+  StateCache::Invalidate();
 }
 bool Core::GetDepthMask() {
   GLboolean output;
@@ -157,6 +167,7 @@ bool Core::GetDepthMask() {
 void Core::SetDepthTest(bool _state) {
   if(_state) glEnable(GL_DEPTH_TEST);
   else       glDisable(GL_DEPTH_TEST);
+  StateCache::Invalidate();
 }
 bool Core::GetDepthTest() {
   GLboolean output;
@@ -166,6 +177,7 @@ bool Core::GetDepthTest() {
 
 void Core::SetDepthFunc(GLenum _func) {
   glDepthFunc(_func);
+  StateCache::Invalidate();
 }
 GLenum Core::GetDepthFunc() {
   GLint output;
@@ -209,6 +221,8 @@ void Core::SetState(const StateBuffer &_stateBuf) {
 std::vector<DrawCommand> Core::s_drawCommands;
 
 std::vector<Core::ShaderRenderUniforms> Core::s_shaderRenderUniforms;
+
+GLenum Core::s_scenePolygonMode = GL_FILL;
 
 
 glm::ivec2 Core::GetWindowSize() {

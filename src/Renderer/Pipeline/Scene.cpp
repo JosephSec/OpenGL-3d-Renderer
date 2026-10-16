@@ -1,6 +1,7 @@
 #include <Renderer/Pipeline/Scene.hpp>
 using namespace Renderer;
 
+#include <Renderer/Core.hpp>
 #include <Renderer/Pipeline/MeshHelper.hpp>
 
 
@@ -13,6 +14,7 @@ void SceneObject::draw() const noexcept {
   if(meshRenderer.isInstanced() == true) meshRenderer.draw();
   else meshRenderer.draw(transform.getModelMatrix());
 }
+
 
 bool SceneObject::SaveToFile(const std::filesystem::path &_path) const {
   std::ofstream file(_path, std::ios::binary);
@@ -38,9 +40,18 @@ bool SceneObject::SaveToFile(const std::filesystem::path &_path) const {
 }
 
 
+Scene::Scene(int _shadowSize) {}// : m_shadowMap(_shadowSize, 1) {}
+
 void Scene::draw() const {
   for(const SceneObject &object : objects) object.draw();
 }
+void Scene::drawShadows() const {
+  for(const SceneObject &object : objects) {
+    if(object.meshRenderer.castShadows == false) continue;
+    object.draw();
+  }
+}
+
 
 bool Scene::SaveToFolder(const std::filesystem::path &_path) const {
   if(std::filesystem::exists(_path)) std::filesystem::remove_all(_path);
