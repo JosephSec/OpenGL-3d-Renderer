@@ -13,6 +13,12 @@ namespace Renderer {
     PostProcess(int _w, int _h);
     ~PostProcess();
 
+    PostProcess(const PostProcess&) = delete;
+    PostProcess operator=(const PostProcess&) = delete;
+
+    PostProcess(PostProcess &&_o) noexcept;
+    PostProcess &operator=(PostProcess &&_o) noexcept;
+
 
     void resize(int _w, int _h);
 

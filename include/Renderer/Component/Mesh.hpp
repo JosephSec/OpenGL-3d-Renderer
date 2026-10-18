@@ -33,9 +33,7 @@ namespace Renderer {
     Mesh& operator=(const Mesh &_o) = delete;
 
 
-    inline void use() const noexcept {
-      glBindVertexArray(m_vao);
-    }
+    void use() const noexcept;
     void draw() const noexcept;
     void drawInstanced(GLsizei _instanceCount, GLuint _baseInstance) const noexcept;
     inline void drawInstanced() const noexcept {

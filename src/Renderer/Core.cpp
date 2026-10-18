@@ -10,8 +10,9 @@ glm::ivec2 Core::windowSize;
 Camera *Core::camera;
 
 
-void Core::init() {
-  window = new sf::RenderWindow(sf::VideoMode{{800,600}}, "3D Rendering Library");
+void Core::init(const std::string &_winName, bool _enableVSync) {
+  window = new sf::RenderWindow(sf::VideoMode{{800,600}}, _winName);
+  window->setVerticalSyncEnabled(_enableVSync);
   windowSize = GetWindowSize();
 
 

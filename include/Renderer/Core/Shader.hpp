@@ -30,9 +30,16 @@ namespace Renderer {
     }
 
 
-    Shader() {}
+    Shader() = default;
     explicit Shader(const std::string &_name);
     ~Shader();
+
+    Shader(const Shader&) = delete;
+    Shader operator=(const Shader&) = delete;
+
+    Shader(Shader &&_o) noexcept;
+    Shader &operator=(Shader &&_o) noexcept;
+
 
     void use() const noexcept;
 
@@ -78,7 +85,7 @@ namespace Renderer {
     static void CheckLink(GLuint _program);
 
 
-    const std::string m_name;
+    std::string m_name = "";
     GLuint m_program = 0;
     uint16_t m_id = 0;
     std::unordered_map<std::string, GLint> m_uniformLocations;

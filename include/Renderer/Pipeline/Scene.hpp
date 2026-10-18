@@ -6,11 +6,13 @@
 
 #include <Renderer/Core/API.hpp>
 
+#include <Renderer/Core/Shader.hpp>
+
 #include <Renderer/Component/Transform.hpp>
 #include <Renderer/Component/MeshRenderer.hpp>
 #include <Renderer/Component/Light.hpp>
 
-#include <Renderer/Core/Shader.hpp>
+#include <Renderer/Pipeline/Skybox.hpp>
 
 
 namespace Renderer {
@@ -29,8 +31,6 @@ namespace Renderer {
 
   class RENDER3D_API Scene {
   public:
-    Scene(int _shadowSize = 1024);
-
     void draw() const;
     void drawShadows() const;
 
@@ -43,5 +43,8 @@ namespace Renderer {
 
     glm::vec4 ambientLighting = glm::vec4(0);
     std::vector<Light*> lights;
+
+    Skybox skybox;
+    Shader *skyboxShader = nullptr;
   };
 }

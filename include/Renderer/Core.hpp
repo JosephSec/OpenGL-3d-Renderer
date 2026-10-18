@@ -24,7 +24,7 @@ namespace Renderer {
     static Camera *camera;
 
 
-    static void init();
+    static void init(const std::string &_winName = "3D Rendering Library", bool _enableVSync = true);
     static void end();
 
 

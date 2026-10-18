@@ -17,6 +17,28 @@ PostProcess::~PostProcess() {
   if(m_vao != 0) glDeleteVertexArrays(1, &m_vao);
 }
 
+PostProcess::PostProcess(PostProcess &&_o) noexcept
+: m_color(std::move(_o.m_color)),
+  m_depth(std::move(_o.m_depth)),
+  m_fbo(std::move(_o.m_fbo)),
+  m_vao(std::move(_o.m_vao)),
+  m_w(std::exchange(_o.m_w, 0)),
+  m_h(std::exchange(_o.m_h, 0)) {}
+PostProcess &PostProcess::operator=(PostProcess &&_o) noexcept {
+  if(this != &_o) {
+    if(m_fbo != 0) glDeleteFramebuffers(1, &m_fbo);
+    if(m_vao != 0) glDeleteVertexArrays(1, &m_vao);
+
+    m_color = std::move(_o.m_color);
+    m_depth = std::move(_o.m_depth);
+    m_fbo = std::move(_o.m_fbo);
+    m_vao = std::move(_o.m_vao);
+    m_w = std::exchange(_o.m_w, 0);
+    m_h = std::exchange(_o.m_h, 0);
+  }
+  return *this;
+}
+
 
 void PostProcess::resize(int _w, int _h) {
   m_color = Texture(_w, _h, GL_RGBA8);

@@ -92,6 +92,9 @@ Mesh& Mesh::operator=(Mesh &&_o) noexcept {
 }
 
 
+void Mesh::use() const noexcept {
+  glBindVertexArray(m_vao);
+}
 void Mesh::draw() const noexcept {
   if(isDrawable() == false) return;
 

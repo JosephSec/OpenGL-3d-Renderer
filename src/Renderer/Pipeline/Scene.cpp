@@ -40,9 +40,9 @@ bool SceneObject::SaveToFile(const std::filesystem::path &_path) const {
 }
 
 
-Scene::Scene(int _shadowSize) {}// : m_shadowMap(_shadowSize, 1) {}
-
 void Scene::draw() const {
+  skybox.draw(skyboxShader);
+
   for(const SceneObject &object : objects) object.draw();
 }
 void Scene::drawShadows() const {

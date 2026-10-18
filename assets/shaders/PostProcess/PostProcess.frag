@@ -25,8 +25,16 @@ out vec4 fragColor;
 // =====================================================================
 //  SETTINGS
 // =====================================================================
-#define QUALITY 1   // 0 = fast, 1 = low, 2 = high, 3 = ultra
+#define QUALITY 3   // 0 = fast, 1 = low, 2 = high, 3 = ultra
 
+// What the per-tier sample counts below control (the names are the same in every tier):
+//   AO_SLICES  - How many screen directions the ambient occlusion sweeps, where more gives smoother AO.
+//   AO_STEPS   - How many depth samples are taken along each AO direction, where more gives more accurate contact shadows.
+//   SSR_RAYS   - How many reflection rays each pixel traces, where more gives less noisy reflections (0 turns reflections off).
+//   SSR_STEPS  - How many steps each reflection ray takes across the screen, where more catches thinner objects.
+//   GI_RAYS    - How many bounce-light rays each pixel traces, where more gives less noisy colour bleeding (0 turns GI off).
+//   DOF_TAPS   - How many blur samples each pixel takes for depth of field, where more gives smoother blur and bokeh.
+//   BLOOM_TAPS - How many samples each of the three bloom rings takes, where more gives a smoother glow.
 #if QUALITY == 0
   const int AO_SLICES = 2, AO_STEPS = 4,  SSR_RAYS = 0, SSR_STEPS = 16, GI_RAYS = 0, DOF_TAPS = 12, BLOOM_TAPS = 4;
 #elif QUALITY == 1
@@ -38,64 +46,69 @@ out vec4 fragColor;
 #endif
 
 // ---- colour pipeline ----
-const bool  SCENE_IS_LINEAR = false;  // true if your lit shader writes LINEAR light (no gamma applied)
-const bool  SCENE_IS_HDR    = false;  // true if m_color is GL_RGBA16F (values may exceed 1.0)
-const float LDR_HDR_BOOST   = 1.6;    // fakes highlight headroom when the target is 8-bit
-const float EXPOSURE        = 1.0;
-const bool  ANIMATE_NOISE   = false;  // true = per-frame noise (use only if you add temporal accumulation)
+const bool  SCENE_IS_LINEAR = false;  // Set true if your lit shader already writes linear light, so this shader skips its sRGB-to-linear conversion.
+const bool  SCENE_IS_HDR    = false;  // Set true if the colour target is a float format (GL_RGBA16F) whose values can exceed 1.0, which disables the highlight boost.
+const float LDR_HDR_BOOST   = 1.6;    // Brightens near-white pixels of an 8-bit target to fake HDR headroom, which strengthens bloom and reflected highlights.
+const float EXPOSURE        = 1.0;    // Multiplies overall image brightness before tonemapping, where values above 1 are brighter.
+const bool  ANIMATE_NOISE   = false;  // Makes the sampling noise change every frame, which only looks good with temporal accumulation and otherwise flickers.
 
 // ---- ambient occlusion (GTAO) ----
-const float AO_RADIUS       = 1.0;    // view-space units
-const float AO_MAX_PIXELS   = 200.0;  // screen-space radius cap; the radius shrinks instead of undersampling
-const float AO_FALLOFF      = 0.6;    // fraction of the radius used to fade out occluders
-const float AO_POWER        = 1.4;
+const float AO_RADIUS       = 1.0;    // How far (in view-space units) a nearby object can be and still darken a surface.
+const float AO_MAX_PIXELS   = 200.0;  // Caps the AO search radius in screen pixels so close surfaces shrink the radius instead of undersampling.
+const float AO_FALLOFF      = 0.6;    // The fraction of the AO radius over which occluders fade out, which avoids hard halos at the edge of the radius.
+const float AO_POWER        = 1.4;    // The contrast of the AO, where higher values make occluded areas darker.
 
 // ---- reflections ----
-const float SSR_F0          = 0.04;   // base reflectivity of non-metals
-const float SSR_ROUGHNESS   = 0.01;   // perceptual roughness (no material buffer, so global)
-const float SSR_MAX_DIST    = 40.0;
-const float SSR_THICKNESS   = 0.2;
-const vec3  ENV_COLOR       = vec3(0.05, 0.06, 0.08);   // what rays that leave the screen "see"
+const float SSR_F0          = 0.25;   // How reflective surfaces are when viewed head-on (real non-metals are about 0.04, higher looks wetter and glossier).
+const float SSR_ROUGHNESS   = 0.30;   // How blurry reflections are (0 = mirror, 1 = very diffuse), global because there is no material buffer, and lower values are much less noisy.
+const float SSR_MAX_DIST    = 40.0;   // The farthest a reflection ray travels, in view-space units.
+const float SSR_THICKNESS   = 0.2;    // How thick the depth buffer assumes surfaces are, so rays do not slip behind thin objects or stick to the wrong ones.
+const float SSR_MAX_RADIANCE = 2.0;   // Caps how bright a reflected pixel can be, which stops tiny bright lights from showing up as speckles across reflective surfaces.
+const vec3  ENV_COLOR       = vec3(0.05, 0.06, 0.08);   // The colour a reflection ray sees when it leaves the screen or hits nothing.
 
 // ---- screen-space GI (one diffuse bounce) ----
-const float GI_STRENGTH     = 0.45;
-const float GI_MAX_DIST     = 4.0;
-const int   GI_STEPS        = 16;
-const float GI_THICKNESS    = 0.4;
+const float GI_STRENGTH     = 0.45;   // How strongly light bounced from nearby surfaces tints a pixel.
+const float GI_MAX_DIST     = 4.0;    // How far (in view-space units) a GI ray searches for a surface to bounce light from.
+const int   GI_STEPS        = 16;     // How many steps each GI ray takes, where more finds more bounce but costs more.
+const float GI_THICKNESS    = 0.4;    // How thick the depth buffer assumes surfaces are for GI rays, the diffuse counterpart of SSR_THICKNESS.
+const float GI_MAX_RADIANCE = 1.5;    // Caps how bright a bounced pixel can be, which removes bright speckles around strong lights.
 
 // ---- depth of field (thin-lens model, units = metres) ----
-const bool  AUTOFOCUS       = true;   // focus on whatever is at screen centre
-const float FOCUS_DISTANCE  = 4.0;    // used when AUTOFOCUS = false
-const float FOCAL_MM        = 35.0;
-const float F_STOP          = 2.8;    // lower = shallower depth of field
-const float SENSOR_MM       = 24.0;   // sensor height
-const float DOF_MAX_PX      = 16.0;   // max blur radius in pixels
+const bool  AUTOFOCUS       = true;   // When true the focus distance follows whatever is at the centre of the screen.
+const float FOCUS_DISTANCE  = 4.0;    // The distance in metres that is in focus when AUTOFOCUS is false.
+const float FOCAL_MM        = 35.0;   // The lens focal length in millimetres, where longer lenses give a shallower depth of field.
+const float F_STOP          = 2.8;    // The lens aperture, where lower numbers give more blur.
+const float SENSOR_MM       = 24.0;   // The sensor height in millimetres, which converts physical blur into pixels (a larger sensor gives more blur).
+const float DOF_MAX_PX      = 16.0;   // The largest blur radius in pixels, which also limits how far blurry foreground objects can bleed over others.
+const float DOF_BOKEH_BOOST = 2.0;    // How much extra weight bright highlights get when blurred into bokeh discs (0 = plain blur, higher = punchier but noisier discs).
 
 // ---- bloom ----
-const float BLOOM_AMOUNT    = 0.14;
-const float BLOOM_THRESH    = 0.9;
-const float BLOOM_KNEE      = 0.5;
+const float BLOOM_AMOUNT    = 0.14;   // The overall strength of the glow added around bright areas.
+const float BLOOM_THRESH    = 0.9;    // How bright a pixel must be before it contributes any glow.
+const float BLOOM_KNEE      = 0.5;    // How soft the threshold edge is, where higher values fade the glow in more gradually.
+const float BLOOM_MAX       = 2.0;    // Caps how bright any single bloom sample can be, which stops tiny very bright pixels from creating speckled halos.
+const vec3  BLOOM_RADII     = vec3(0.004, 0.016, 0.040);   // The radii of the small, medium and large glow rings as fractions of screen height.
 
 // ---- fog (exponential height fog, world units) ----
-const vec3  FOG_COLOR           = vec3(0.50, 0.58, 0.70);   // sRGB
-const float FOG_DENSITY         = 0.010;
-const float FOG_HEIGHT_FALLOFF  = 0.18;
-const float FOG_BASE_HEIGHT     = -5.0;
+const vec3  FOG_COLOR           = vec3(0.50, 0.58, 0.70);   // The colour distant objects fade toward, in sRGB.
+const float FOG_DENSITY         = 0.010;   // How thick the fog is at its base height, where higher values fade things out sooner.
+const float FOG_HEIGHT_FALLOFF  = 0.18;    // How quickly the fog thins out with height, where higher values keep it hugging the ground.
+const float FOG_BASE_HEIGHT     = -5.0;    // The world-space height (Y) at which the fog is at full density.
 
 // ---- lens / film / grade ----
-const float CA_AMOUNT       = 0.0015;
-const float VIGNETTE        = 0.3;
-const float GRAIN           = 0.02;
-const float SATURATION      = 1.05;
-const float CONTRAST        = 0.15;
+const float CA_AMOUNT       = 0.0015;  // How far the red and blue channels shift apart toward the screen edges (chromatic aberration).
+const float VIGNETTE        = 0.3;     // How much the corners of the image darken, where 0 is off.
+const float GRAIN           = 0.02;    // The strength of the animated film grain.
+const float SATURATION      = 1.05;    // The colour intensity of the final image, where 1.0 is unchanged and 0.0 is greyscale.
+const float CONTRAST        = 0.15;    // How strongly an S-curve is applied to the final image, where 0 is off.
 
 // =====================================================================
 //  CONSTANTS / GLOBALS
 // =====================================================================
-const float PI            = 3.14159265359;
-const float HALF_PI       = 1.57079632679;
-const float TAU           = 6.28318530718;
-const float GOLDEN_ANGLE  = 2.39996323;
+const float PI            = 3.14159265359;   // Half a turn in radians.
+const float HALF_PI       = 1.57079632679;   // A quarter turn in radians.
+const float TAU           = 6.28318530718;   // A full turn in radians.
+const float GOLDEN_ANGLE  = 2.39996323;      // The angle in radians that spreads sample points evenly around a disc without lining up.
 
 ivec2 gSize;
 uvec2 gPix;
@@ -107,6 +120,11 @@ uint  gFrame;
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float max3(vec3 c) { return max(c.r, max(c.g, c.b)); }
 
+// Scales a colour down so its brightest channel is at most m, keeping its hue.
+vec3 clampRadiance(vec3 c, float m) { return c * min(1.0, m / max(max3(c), 1e-4)); }
+
+// Interleaved gradient noise: a fine, evenly spread per-pixel pattern that looks much
+// smoother than white noise when used to rotate sample patterns.
 float ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
 
 uint pcg(uint v) {
@@ -393,7 +411,7 @@ vec3 dofGather(vec2 uv, float centerCoc, float centerDepth, float focus, float r
     float w = smoothstep(r - 0.5, r + 0.5, tc) * smoothstep(0.4, 1.0, tc);
     if(w > 0.0) {
       vec3 c = sceneColor(tuv);
-      float bw = 1.0 + 4.0 * smoothstep(1.0, 4.0, luma(c));   // bright highlights form bokeh discs
+      float bw = 1.0 + DOF_BOKEH_BOOST * smoothstep(1.0, 4.0, luma(c));   // bright highlights form bokeh discs
       sum  += c * (w * bw);
       wsum += w * bw;
     }
@@ -420,7 +438,7 @@ vec3 bloomRing(float radiusPx, float rot) {
     float a = float(i) * GOLDEN_ANGLE + rot * TAU;
     vec2 uv = vUV + vec2(cos(a), sin(a)) * (radiusPx * sqrt(t)) / vec2(gSize);
     float w = exp(-2.5 * t);
-    sum  += brightPass(sceneColor(uv)) * w;
+    sum  += clampRadiance(brightPass(sceneColor(uv)), BLOOM_MAX) * w;
     wsum += w;
   }
   return sum / wsum;
@@ -444,11 +462,11 @@ vec3 applyFog(vec3 c, float dist, vec3 rayW) {
 // =====================================================================
 //  TONEMAP (ACES, Hill fit)
 // =====================================================================
-const mat3 ACES_IN = mat3(
+const mat3 ACES_IN = mat3(          // Converts linear sRGB into the colour space the ACES curve is fitted in.
   0.59719, 0.07600, 0.02840,
   0.35458, 0.90834, 0.13383,
   0.04823, 0.01566, 0.83777);
-const mat3 ACES_OUT = mat3(
+const mat3 ACES_OUT = mat3(         // Converts from the ACES fitting space back to linear sRGB after the curve is applied.
    1.60475, -0.10208, -0.00327,
   -0.53108,  1.10813, -0.07276,
   -0.07367, -0.00605,  1.07602);
@@ -478,10 +496,11 @@ void main() {
   float viewDepth = -P.z;
 
   // ---------- depth of field on the raw scene ----------
-  float focus = focusDistance();
-  float coc   = cocRadiusPx(viewDepth, focus);
-  vec3  col   = dofGather(vUV, coc, viewDepth, focus, rnd(8u));
-  float sharp = 1.0 - smoothstep(1.0, 6.0, coc);   // fade surface effects where the image is blurred
+  float focus  = focusDistance();
+  float coc    = cocRadiusPx(viewDepth, focus);
+  float dofRot = ign(fragPx + vec2(13.0, 7.0) + 5.588238 * frame);   // FIX: IGN rotation instead of white noise
+  vec3  col    = dofGather(vUV, coc, viewDepth, focus, dofRot);
+  float sharp  = 1.0 - smoothstep(1.0, 6.0, coc);   // fade surface effects where the image is blurred
 
   vec3 base = sceneColor(vUV);
 
@@ -513,14 +532,14 @@ void main() {
         if(traceRay(rayOrg, L, GI_MAX_DIST, GI_STEPS, fract(gj + float(r) * 0.618034), GI_THICKNESS, hp, hd)) {
           vec2 huv = (vec2(hp) + 0.5) / vec2(gSize);
           float w = edgeFade(huv) * (1.0 - smoothstep(0.5 * GI_MAX_DIST, GI_MAX_DIST, hd));
-          gi += min(sceneColor(huv), vec3(3.0)) * w;
+          gi += clampRadiance(sceneColor(huv), GI_MAX_RADIANCE) * w;   // FIX: hue-preserving clamp
         }
       }
-      col += gi / float(GI_RAYS) * albedo * GI_STRENGTH * sharp;
+      col += gi / float(max(GI_RAYS, 1)) * albedo * GI_STRENGTH * sharp;
     }
 
     // ---------- glossy screen-space reflections ----------
-    {
+    if(SSR_RAYS > 0) {   // FIX: the fast tier has 0 rays, which used to divide by zero and trip the NaN guard
       float alpha = SSR_ROUGHNESS * SSR_ROUGHNESS;
       float sa = rnd(3u), sb = rnd(4u), sj = rnd(2u);
       vec3 refl = vec3(0.0);
@@ -534,7 +553,7 @@ void main() {
         if(traceRay(rayOrg, R, SSR_MAX_DIST, SSR_STEPS, fract(sj + float(r) * 0.618034), SSR_THICKNESS, hp, hd)) {
           vec2 huv = (vec2(hp) + 0.5) / vec2(gSize);
           float w = edgeFade(huv) * (1.0 - clamp(hd / SSR_MAX_DIST, 0.0, 1.0));
-          refl += mix(ENV_COLOR, min(sceneColor(huv), vec3(4.0)), w);
+          refl += mix(ENV_COLOR, clampRadiance(sceneColor(huv), SSR_MAX_RADIANCE), w);   // FIX: hue-preserving clamp
         } else {
           refl += ENV_COLOR;
         }
@@ -555,11 +574,11 @@ void main() {
 
   // ---------- bloom (3 scales) ----------
   {
-    float rot = rnd(9u);
+    float rot = ign(fragPx + vec2(29.0, 3.0) + 5.588238 * frame);   // FIX: IGN rotation instead of white noise
     float H = float(gSize.y);
-    vec3 bloom = 0.50 * bloomRing(0.004 * H, rot)
-               + 0.30 * bloomRing(0.016 * H, rot + 0.37)
-               + 0.20 * bloomRing(0.060 * H, rot + 0.71);
+    vec3 bloom = 0.50 * bloomRing(BLOOM_RADII.x * H, rot)
+               + 0.30 * bloomRing(BLOOM_RADII.y * H, rot + 0.37)
+               + 0.20 * bloomRing(BLOOM_RADII.z * H, rot + 0.71);
     col += bloom * BLOOM_AMOUNT;
   }
 

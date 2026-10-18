@@ -2,6 +2,7 @@
 #include <User.hpp>
 
 #include <Renderer/Core.hpp>
+#include <Renderer/Core/ShadowMap.hpp>
 #include <Renderer/Component/MeshRenderer.hpp>
 #include <Renderer/Component/Camera.hpp>
 #include <Renderer/Pipeline/Scene.hpp>
@@ -9,112 +10,61 @@
 #include <Renderer/Pipeline/Skybox.hpp>
 #include <Renderer/Pipeline/PostProcess.hpp>
 
-#include <random>
-#include <chrono>
-#include <sstream>
-#include <iostream>
+#include <CyberScene.inl>
+
 #include <map>
+#include <optional>
+#include <iostream>
 
 
-int main(int argc, char *argv[]) {
+
+static Renderer::Camera *camera = nullptr;
+static Renderer::Shader unlitShader;
+static Renderer::Shader litShader;
+static Renderer::Shader shadowShader;
+
+static Renderer::Shader postShader;
+static Renderer::Shader skyboxShader;
+
+
+static std::optional<Renderer::Scene> scene;
+static std::optional<Renderer::PostProcess> postProcess;
+static std::optional<Renderer::ShadowMap> shadows;
+
+
+static void init() {
   System::init();
-  Renderer::Core::init();
-  Renderer::Core::window->setVerticalSyncEnabled(true);
+  Renderer::Core::init("3D Rendering Library", true);
 
-  Renderer::Camera *camera = new Renderer::Camera();
+  camera = new Renderer::Camera();
   Renderer::Core::camera = camera;
-  camera->transform = Renderer::Transform({-2,2,-2}, Renderer::Transform::LookAtRotation({-2,2,-2}, {0,0,0}, {0,1,0}));
 
-  Renderer::Shader unlitShader("Unlit");
+
+  unlitShader = Renderer::Shader("Unlit");
+  litShader = Renderer::Shader("Lit");
+  shadowShader = Renderer::Shader("ShadowDepth");
+
   Renderer::Core::CacheRenderUniforms(&unlitShader);
-
-  Renderer::Shader litShader("Lit");
   Renderer::Core::CacheRenderUniforms(&litShader);
+  Renderer::Core::CacheRenderUniforms(&shadowShader);
+
+  postShader = Renderer::Shader("PostProcess");
+  skyboxShader = Renderer::Shader("Skybox");
   
   Renderer::Core::UpdateViewMatrix();
   Renderer::Core::UpdateWindowSize();
 
-
-  Renderer::Shader skyboxShader("Skybox");
-  Renderer::Skybox skybox;
-  Renderer::Skybox::SplitToFaces(System::PATH+"/assets/skyboxs/DimTwilight/cubemap.png");
-  skybox.loadFromFolder(System::PATH+"/assets/skyboxs/DimTwilight");
-
-  Renderer::PostProcess post(1920,1080);
-  Renderer::Shader postShader("PostProcess");
-
-
-  Renderer::Scene activeScene; {
-    activeScene.meshes.push_back(std::move(Renderer::MeshHelper::GenerateCube()));
-    {
-      Renderer::Mesh boxMesh = std::move(Renderer::MeshHelper::GenerateCube());
-      std::vector<unsigned int> indices = boxMesh.getIndices();
-      for(size_t i = 0; i < indices.size() / 3; i++) {
-        const size_t start = i * 3;
-
-        std::swap(indices[start + 0], indices[start + 1]);
-      }
-      boxMesh.setIndices(indices);
-      boxMesh.editVertices([](std::vector<Renderer::Vertex> &_vertices) {
-        for(Renderer::Vertex &vertex : _vertices) vertex.normal = -vertex.normal;
-      });
-
-      activeScene.meshes.push_back(std::move(boxMesh));
-    }
-
-    activeScene.objects.push_back(Renderer::SceneObject{
-      "Cube",
-      Renderer::MeshRenderer(&activeScene.meshes[0], &litShader),
-      Renderer::Transform({0,0,0})
-    });
-    activeScene.objects.push_back(Renderer::SceneObject{
-      "Box",
-      Renderer::MeshRenderer(&activeScene.meshes[1], &litShader),
-      Renderer::Transform({0,0,0}, glm::quat(), {10,10,10})
-    });
-
-    activeScene.ambientLighting = {1,1,1, .01f};
-    activeScene.lights = {
-      new Renderer::PointLight({2,2,-2}, {1,0,0,1}, 15),
-    };
-  }
-
-  Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
-
-
-  // ---- Point light shadows ----
-  constexpr int   SHADOW_SIZE = 1024;
-  constexpr float SHADOW_FAR  = 30.0f;     // must cover the farthest surface the light reaches
-  constexpr GLuint SHADOW_UNIT = 5;        // free unit (skybox uses 0, post uses 0 and 1)
-
-  Renderer::Shader shadowDepthShader("ShadowDepth");
-  Renderer::Core::CacheRenderUniforms(&shadowDepthShader);
-
-  Renderer::Cubemap shadowCube(SHADOW_SIZE, GL_DEPTH_COMPONENT32F, 1);
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);   // we compare distances ourselves
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-  glTextureParameteri(shadowCube.id(), GL_TEXTURE_COMPARE_MODE, GL_NONE);
-
-  GLuint shadowFbo = 0;
-  glCreateFramebuffers(1, &shadowFbo);
-  glNamedFramebufferDrawBuffer(shadowFbo, GL_NONE);
-  glNamedFramebufferReadBuffer(shadowFbo, GL_NONE);
-
-  // Same meshes/transforms as the scene objects, but drawn with the depth shader
-  struct ShadowCaster { Renderer::MeshRenderer renderer; Renderer::Transform transform; };
-  std::vector<ShadowCaster> shadowCasters;
-  shadowCasters.push_back({Renderer::MeshRenderer(&activeScene.meshes[0], &shadowDepthShader), Renderer::Transform({0,0,0})});
-  shadowCasters.push_back({Renderer::MeshRenderer(&activeScene.meshes[1], &shadowDepthShader), Renderer::Transform({0,0,0}, glm::quat(), {10,10,10})});
-
-  // Standard cubemap face orientations (+X, -X, +Y, -Y, +Z, -Z)
-  const glm::vec3 faceDir[6] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
-  const glm::vec3 faceUp [6] = {{0,-1,0},{0,-1,0},{0,0,1},{0,0,-1},{0,-1,0},{0,-1,0}};
   
+  postProcess.emplace(1920,1080);
+  shadows.emplace();
 
-  static bool doPost = false;
+  CreateCyberScene();
+}
+int main(int argc, char *argv[]) {
+  init();
+
+
+  static bool doPost = true;
   while(Renderer::Core::window->isOpen()) {
     while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -138,8 +88,10 @@ int main(int argc, char *argv[]) {
       static float timeSinceStart = 0;
       timeSinceStart += System::deltaTime;
 
-      activeScene.lights[0]->position = {glm::cos(timeSinceStart * .5f) * 2, glm::cos(timeSinceStart * .33f) * 2, glm::sin(timeSinceStart * .5f) * 2};
-      Renderer::Core::UpdateDynamicLighting(&litShader, activeScene);
+      const glm::vec3 dronePos = glm::vec3{
+        glm::cos(timeSinceStart * .45f) * 3.f, glm::sin(timeSinceStart * 1.1f) * .25f, glm::sin(timeSinceStart * .45f) * 3.f};
+      scene->objects[droneObject].transform.position = dronePos;
+      scene->lights[0]->position = dronePos - glm::vec3{0, .4f, 0};
 
       postShader.use();            
       postShader.setUniform("uProj", Renderer::Core::camera->getProjectionMatrix(Renderer::Core::windowSize));
@@ -153,78 +105,41 @@ int main(int argc, char *argv[]) {
       Renderer::Core::SetState(Renderer::StateType::Scene); {
         Renderer::Core::clear();
 
-        // ---- Shadow pass (before post.begin, because that binds the post FBO) ----
-        if(!activeScene.lights.empty()) {
-          const glm::vec3 lightPos = activeScene.lights[0]->position;
-          const glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.05f, SHADOW_FAR);
-
-          Renderer::StateCache::PushStates();
-
-          glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo);
-          glViewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
-          glDisable(GL_SCISSOR_TEST);
-          glEnable(GL_DEPTH_TEST);
-          glDepthFunc(GL_LESS);
-          glDepthMask(GL_TRUE);
-          Renderer::StateCache::Invalidate();      // raw GL above bypassed the cache
-
-          shadowDepthShader.use();
-          shadowDepthShader.setUniform("uLightPos", lightPos);
-          shadowDepthShader.setUniform("uShadowFar", SHADOW_FAR);
-
-          for(int f = 0; f < 6; f++) {
-            glNamedFramebufferTextureLayer(shadowFbo, GL_DEPTH_ATTACHMENT, shadowCube.id(), 0, f);
-            glClear(GL_DEPTH_BUFFER_BIT);
-
-            shadowDepthShader.setUniform("uLightSpace", proj * glm::lookAt(lightPos, lightPos + faceDir[f], faceUp[f]));
-            for(ShadowCaster &c : shadowCasters) c.renderer.draw(c.transform);
-            Renderer::Core::ExecuteDrawCommands();
-          }
-
-          glBindFramebuffer(GL_FRAMEBUFFER, 0);
-          glViewport(0, 0, Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
-          Renderer::StateCache::Invalidate();
-          Renderer::StateCache::PullStates();
-
-          // Feed the lit shader
-          shadowCube.bind(SHADOW_UNIT);
-          litShader.use();
-          litShader.setUniform("uShadowCube", (int)SHADOW_UNIT);
-          litShader.setUniform("uShadowLightPos", lightPos);
-          litShader.setUniform("uShadowFar", SHADOW_FAR);
-          litShader.setUniform("uHasShadow", true);
-        }
+        shadows->drawShadows(*scene, &shadowShader);
+        shadows->loadToShader(scene->lights[0]->position, &litShader);
 
         Renderer::StateCache::PushStates();
-        if(doPost) post.begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
+        if(doPost) postProcess->begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
 
-        skybox.draw(&skyboxShader);
+        scene->draw();
 
-        activeScene.draw();
-
-        if(activeScene.lights.empty() == false) {
+        { //Draw Gizmos
           Renderer::StateCache::PushStates();
-          Renderer::Core::SetDepthFunc(GL_ALWAYS);
+          Renderer::Core::SetDepthMask(false);
+          Renderer::Core::SetDepthTest(false);
           Renderer::StateCache::Invalidate();
+          
 
-          Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
-          Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
+          if(scene->lights.empty() == false) {
+            Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
+            Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
 
-          for(const Renderer::Light *light : activeScene.lights) {
-            sphereMesh.editVertices([&](std::vector<Renderer::Vertex> &_vertices) {
-              for(Renderer::Vertex &vertex : _vertices) vertex.color = glm::vec4{glm::vec3{light->color}, 1};
-            });
+            for(const Renderer::Light *light : scene->lights) {
+              sphereMesh.editVertices([&](std::vector<Renderer::Vertex> &_vertices) {
+                for(Renderer::Vertex &vertex : _vertices) vertex.color = glm::vec4{glm::vec3{light->color}, 1};
+              });
 
-            meshRenderer.draw(Renderer::Transform(light->position));
+              meshRenderer.draw(Renderer::Transform(light->position));
+            }
           }
 
           Renderer::Core::SetDepthFunc(GL_LEQUAL);
           Renderer::StateCache::PullStates();
-        }
+        } //Draw Gizmos
+          
+          Renderer::Core::ExecuteDrawCommands();
 
-        Renderer::Core::ExecuteDrawCommands();
-
-        if(doPost) post.end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);      
+        if(doPost) postProcess->end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);      
         Renderer::StateCache::PullStates();
       }
 

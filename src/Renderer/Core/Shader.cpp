@@ -1,6 +1,8 @@
 #include <Renderer/Core/Shader.hpp>
 using namespace Renderer;
 
+#include <utility>
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -14,7 +16,7 @@ uint16_t Shader::s_nextID = 0;
 
 Shader::Shader(const std::string &_name) : m_name(_name), m_id(s_nextID) {
   const std::vector<GLuint> shaders = GetShaders(_name);
-  
+
   m_program = glCreateProgram();
   for(const GLuint shader : shaders) glAttachShader(m_program, shader);
   glLinkProgram(m_program);
@@ -33,6 +35,24 @@ Shader::Shader(const std::string &_name) : m_name(_name), m_id(s_nextID) {
 Shader::~Shader() {
   if(m_program != 0) glDeleteProgram(m_program);
 }
+
+Shader::Shader(Shader &&_o) noexcept
+: m_name(std::move(_o.m_name)),
+  m_id(std::exchange(_o.m_id, 0)),
+  m_program(std::exchange(_o.m_program, 0)),
+  m_uniformLocations(std::move(_o.m_uniformLocations)) {}
+Shader &Shader::operator=(Shader &&_o) noexcept {
+  if(this != &_o) {
+    if(m_program != 0) glDeleteProgram(m_program);
+
+    m_name             = std::move(_o.m_name);
+    m_id               = std::exchange(_o.m_id, 0);
+    m_program          = std::exchange(_o.m_program, 0);
+    m_uniformLocations = std::move(_o.m_uniformLocations);
+  }
+  return *this;
+}
+
 
 void Shader::use() const noexcept {
   glUseProgram(m_program);
