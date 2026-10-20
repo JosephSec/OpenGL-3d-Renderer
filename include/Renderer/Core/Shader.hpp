@@ -14,7 +14,7 @@
 #include <SFML/Graphics/Color.hpp>
 #include <GL/glew.h>
 
-#include <Renderer/Core/API.hpp>
+#include <Renderer/API.hpp>
 
 
 namespace Renderer {
@@ -69,16 +69,18 @@ namespace Renderer {
     inline uint16_t getID() const noexcept {
       return m_id;
     }
+    inline bool validate() const noexcept {
+      return m_id != 0;
+    }
 
     UniformLocation getUniform(const std::string &_name) const noexcept;
     
 
   private:
     static std::filesystem::path s_shaderFolder;
-    static uint16_t s_nextID;
 
     static std::vector<GLuint> GetShaders(const std::string &_name);
-    static GLuint CompileShader(GLenum _type, const char *_src);
+    static GLuint Compile(GLenum _type, const char *_src);
 
     static std::unordered_map<std::string, GLint> CacheUniforms(GLuint _program);
 
@@ -86,8 +88,7 @@ namespace Renderer {
 
 
     std::string m_name = "";
-    GLuint m_program = 0;
-    uint16_t m_id = 0;
+    GLuint m_id = 0;
     std::unordered_map<std::string, GLint> m_uniformLocations;
   };
 }

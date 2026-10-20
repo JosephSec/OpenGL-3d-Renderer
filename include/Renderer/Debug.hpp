@@ -1,17 +1,16 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <map>
+#include <Renderer/API.hpp>
 
-#include <Renderer/Core/API.hpp>
-
-#include <GL/glew.h>
+#include <iostream>
 
 
 namespace Renderer {
-  class RENDER3D_API Debug {
-  public:
-    static void dumpGLOnChange(const char *tag, GLuint postFbo = 0);
-  };
+  static void LogError(const std::string &_msg, bool _handled = false) {
+    std::cout << _msg << '\n';
+    if(_handled == false) {
+      std::cin.get();
+      throw;
+    }
+  }
 }

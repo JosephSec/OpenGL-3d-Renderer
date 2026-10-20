@@ -2,69 +2,89 @@
 #include <User.hpp>
 
 #include <Renderer/Core.hpp>
-#include <Renderer/Core/ShadowMap.hpp>
-#include <Renderer/Component/MeshRenderer.hpp>
+#include <Renderer/Core/Shader.hpp>
+#include <Renderer/Core/Mesh.hpp>
 #include <Renderer/Component/Camera.hpp>
-#include <Renderer/Pipeline/Scene.hpp>
-#include <Renderer/Pipeline/MeshHelper.hpp>
-#include <Renderer/Pipeline/Skybox.hpp>
-#include <Renderer/Pipeline/PostProcess.hpp>
 
-#include <CyberScene.inl>
+#include <Renderer/Debug/Graph.hpp>
+#include <Renderer/Debug/GPU.hpp>
 
-#include <map>
-#include <optional>
 #include <iostream>
 
 
+static Renderer::LineGraph fpsGraph(60, 0, 240.0f);
+static float plotTime = 1.0f / 30.0f;
+static float timeTillPlot = plotTime;
 
-static Renderer::Camera *camera = nullptr;
-static Renderer::Shader unlitShader;
-static Renderer::Shader litShader;
-static Renderer::Shader shadowShader;
-
-static Renderer::Shader postShader;
-static Renderer::Shader skyboxShader;
+static Renderer::LineGraph vramGraph(60, 0, 1);
 
 
-static std::optional<Renderer::Scene> scene;
-static std::optional<Renderer::PostProcess> postProcess;
-static std::optional<Renderer::ShadowMap> shadows;
-
-
-static void init() {
-  System::init();
-  Renderer::Core::init("3D Rendering Library", true);
-
-  camera = new Renderer::Camera();
-  Renderer::Core::camera = camera;
-
-
-  unlitShader = Renderer::Shader("Unlit");
-  litShader = Renderer::Shader("Lit");
-  shadowShader = Renderer::Shader("ShadowDepth");
-
-  Renderer::Core::CacheRenderUniforms(&unlitShader);
-  Renderer::Core::CacheRenderUniforms(&litShader);
-  Renderer::Core::CacheRenderUniforms(&shadowShader);
-
-  postShader = Renderer::Shader("PostProcess");
-  skyboxShader = Renderer::Shader("Skybox");
-  
-  Renderer::Core::UpdateViewMatrix();
-  Renderer::Core::UpdateWindowSize();
-
-  
-  postProcess.emplace(1920,1080);
-  shadows.emplace();
-
-  CreateCyberScene();
-}
 int main(int argc, char *argv[]) {
-  init();
+  System::init();
+  Renderer::Core::init(true);
+  Renderer::Core::window->setActive(true);
+
+  Renderer::Mesh mesh; {
+    mesh();
+
+    constexpr uint32_t triCount = 1'000'000;
+    constexpr float depth = 50.0f;                    // distance in front of the camera
+    constexpr float fovX  = glm::radians(90.0f);      // horizontal FOV
+    const float aspect = float(Renderer::Core::windowSize.x) / Renderer::Core::windowSize.y;
+
+    // View rectangle at that depth
+    const float halfW = depth * std::tan(fovX * 0.5f);   // tan(45°) = 1, so halfW == depth at 90°
+    const float halfH = halfW / aspect;
+
+    // Grid with the same aspect ratio as the window, so cells are roughly square
+    const uint32_t cols = static_cast<uint32_t>(std::ceil(std::sqrt(triCount * aspect)));
+    const uint32_t rows = (triCount + cols - 1) / cols;
+
+    const float cellW = (2.0f * halfW) / cols;
+    const float cellH = (2.0f * halfH) / rows;
+    const float triW  = cellW * 0.9f;
+    const float triH  = cellH * 0.9f;
+
+    std::vector<Renderer::Mesh::Vertex> vertices;
+    std::vector<Renderer::Mesh::Index> indices;      // must be uint32_t
+    vertices.reserve(size_t(triCount) * 3);
+    indices.reserve(size_t(triCount) * 3);
+
+    for(uint32_t i = 0; i < triCount; i++) {
+      const float cx = -halfW + (i % cols + 0.5f) * cellW;
+      const float cy = -halfH + (i / cols + 0.5f) * cellH;
+      const float z  = -depth;
+      const uint32_t base = i * 3;
+
+      vertices.push_back({{cx - triW * 0.5f, cy - triH * 0.5f, z}, {1,0,0,1}});
+      vertices.push_back({{cx,               cy + triH * 0.5f, z}, {0,1,0,1}});
+      vertices.push_back({{cx + triW * 0.5f, cy - triH * 0.5f, z}, {0,0,1,1}});
+
+      indices.push_back(base + 0);
+      indices.push_back(base + 1);
+      indices.push_back(base + 2);
+    }
+
+    mesh.setVertices(vertices);
+    mesh.setIndices(indices);
+  }
+
+  Renderer::Shader shader("Unlit");
+
+  
+  std::cout << "GPU: " << Renderer::Core::GetGPUName() << " | Available VRAM: " << Renderer::GPU::VRAMCapacity / (1024 * 1024) << "MB\n";
+  std::cout << "Used VRAM: " << Renderer::GPU::VRAMInUse / 1000 << "KB | " << Renderer::GPU::GetUsedVRAM() << "%\n";
 
 
-  static bool doPost = true;
+  fpsGraph.setTimerLength(1 / 30.0f);
+
+  vramGraph.max = Renderer::GPU::VRAMCapacity;
+  vramGraph.setTimerLength(1 / 30.0f);
+
+
+  Renderer::Camera camera;
+
+
   while(Renderer::Core::window->isOpen()) {
     while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -75,7 +95,12 @@ int main(int argc, char *argv[]) {
 
       else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) {
         User::HandleKeyPressed(keyPressed);
-        if(keyPressed->code == sf::Keyboard::Key::Space) doPost = !doPost;
+        if(keyPressed->code == sf::Keyboard::Key::Space) {
+          static bool cap = false;
+          cap = !cap;
+          Renderer::Core::window->setFramerateLimit(cap? 60 : 0);
+        }
+        else if(keyPressed->code == sf::Keyboard::Key::X && keyPressed->alt) fpsGraph.log();
       }
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
       else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
@@ -84,77 +109,59 @@ int main(int argc, char *argv[]) {
     { //Update
       System::update();
       User::update();
-
-      static float timeSinceStart = 0;
-      timeSinceStart += System::deltaTime;
-
-      const glm::vec3 dronePos = glm::vec3{
-        glm::cos(timeSinceStart * .45f) * 3.f, glm::sin(timeSinceStart * 1.1f) * .25f, glm::sin(timeSinceStart * .45f) * 3.f};
-      scene->objects[droneObject].transform.position = dronePos;
-      scene->lights[0]->position = dronePos - glm::vec3{0, .4f, 0};
-
-      postShader.use();            
-      postShader.setUniform("uProj", Renderer::Core::camera->getProjectionMatrix(Renderer::Core::windowSize));
-      postShader.setUniform("uView", Renderer::Core::camera->getViewMatrix());
-      postShader.setUniform("uViewSize", glm::vec2{Renderer::Core::windowSize});
-      postShader.setUniform("uTime", timeSinceStart);
-      postShader.setUniform("uCameraWorldPos", Renderer::Core::camera->transform.position);
     } //Update
 
     { //Render
-      Renderer::Core::SetState(Renderer::StateType::Scene); {
-        Renderer::Core::clear();
+      Renderer::Core::clear();
 
-        shadows->drawShadows(*scene, &shadowShader);
-        shadows->loadToShader(scene->lights[0]->position, &litShader);
+      { //Scene
+        { //GL Init
+          glEnable(GL_DEPTH_TEST);
+          glDepthMask(GL_TRUE);
+          glDepthFunc(GL_LESS);
+          glEnable(GL_CULL_FACE);
+          glCullFace(GL_BACK);
+          glFrontFace(GL_CW);
+          glDisable(GL_BLEND);
+        } //GL Init
 
-        Renderer::StateCache::PushStates();
-        if(doPost) postProcess->begin(Renderer::Core::windowSize.x, Renderer::Core::windowSize.y);
 
-        scene->draw();
+        shader.use();
+        shader.setUniform("uProj", camera.getProjectionMatrix(Renderer::Core::windowSize));
+        shader.setUniform("uView", camera.getViewMatrix());
+        shader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
 
-        { //Draw Gizmos
-          Renderer::StateCache::PushStates();
-          Renderer::Core::SetDepthMask(false);
-          Renderer::Core::SetDepthTest(false);
-          Renderer::StateCache::Invalidate();
-          
+        mesh.use();
+        mesh.draw();
+      } //Scene
+      { //UI
+        { //GL Init
+          glBindVertexArray(0);
+          glBindBuffer(GL_ARRAY_BUFFER, 0);
+          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+          glUseProgram(0);
 
-          if(scene->lights.empty() == false) {
-            Renderer::Mesh sphereMesh = std::move(Renderer::MeshHelper::GenerateUVSphere(8,8, .25f));
-            Renderer::MeshRenderer meshRenderer(&sphereMesh, &unlitShader);
+          Renderer::Core::window->pushGLStates();
+        } //GL Init
 
-            for(const Renderer::Light *light : scene->lights) {
-              sphereMesh.editVertices([&](std::vector<Renderer::Vertex> &_vertices) {
-                for(Renderer::Vertex &vertex : _vertices) vertex.color = glm::vec4{glm::vec3{light->color}, 1};
-              });
+        fpsGraph.update(1.0f / System::deltaTime, System::deltaTime);
+        vramGraph.update(Renderer::GPU::VRAMInUse, System::deltaTime);
 
-              meshRenderer.draw(Renderer::Transform(light->position));
-            }
-          }
+        
+        sf::FloatRect area = {{15.0f, 15.0f}, {350.0f, 150.0f}};
 
-          Renderer::Core::SetDepthFunc(GL_LEQUAL);
-          Renderer::StateCache::PullStates();
-        } //Draw Gizmos
-          
-          Renderer::Core::ExecuteDrawCommands();
-
-        if(doPost) postProcess->end(&postShader, Renderer::Core::windowSize.x,Renderer::Core::windowSize.y);      
-        Renderer::StateCache::PullStates();
-      }
-
-      Renderer::Core::SetState(Renderer::StateType::UI); {
-        Renderer::StateCache::PushStates();
-        Renderer::Core::window->resetGLStates();
-        Renderer::StateCache::Invalidate();
-
-        sf::RectangleShape shape({25,25});
-        shape.setPosition({25,25});
-        shape.setFillColor(sf::Color::Red);
+        sf::RectangleShape shape(area.size);
+        shape.setPosition(area.position);
+        shape.setFillColor(sf::Color(25,25,25,200));
         Renderer::Core::window->draw(shape);
 
-        Renderer::StateCache::PullStates();
-      }
+        fpsGraph.draw(area, sf::Color::Blue, 240.0f);
+        vramGraph.draw(area, sf::Color::Red, Renderer::GPU::VRAMCapacity);
+
+        Renderer::Core::window->popGLStates();
+      } //UI
+
+
 
       Renderer::Core::display();
     } //Render

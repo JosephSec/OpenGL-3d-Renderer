@@ -14,11 +14,13 @@
 
         "${workspaceFolder}/src/Renderer/*.cpp",
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
-        "${workspaceFolder}/src/Renderer/Component/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
+        "${workspaceFolder}/src/Renderer/Debug/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Component/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
+        "-ldxgi"
       ]
     },
     {
@@ -37,6 +39,7 @@
         "${workspaceFolder}/bin/render3d.dll",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
+        "-ldxgi"
       ],
       "dependsOn": ["Compile DLL"]
     },
@@ -72,11 +75,13 @@
 
         "${workspaceFolder}/src/Renderer/*.cpp",
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
-        "${workspaceFolder}/src/Renderer/Component/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
+        "${workspaceFolder}/src/Renderer/Debug/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Component/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
         "-lglew32", "-lopengl32",
+        "-ldxgi"
       ],
     },
     {
@@ -95,11 +100,13 @@
 
         "${workspaceFolder}/src/Renderer/*.cpp",
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
-        "${workspaceFolder}/src/Renderer/Component/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
+        "${workspaceFolder}/src/Renderer/Debug/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Component/*.cpp",
+        // "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         
         "-lsfml-graphics-s", "-lsfml-window-s", "-lsfml-system-s",
         "-lglew32", "-lopengl32", "-lfreetype", "-lwinmm", "-lgdi32",
+        "-ldxgi"
       ]
     },
     {

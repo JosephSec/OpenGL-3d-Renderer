@@ -1,53 +1,58 @@
 #include <Renderer/Core/Shader.hpp>
 using namespace Renderer;
 
-#include <utility>
+#include <Renderer/Debug.hpp>
+#include <Renderer/Debug/GPU.hpp>
 
+#include <utility>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 
 
 //private
 std::filesystem::path Shader::s_shaderFolder;
-uint16_t Shader::s_nextID = 0;
 //private
 
 
-Shader::Shader(const std::string &_name) : m_name(_name), m_id(s_nextID) {
+Shader::Shader(const std::string &_name) : m_name(_name) {
   const std::vector<GLuint> shaders = GetShaders(_name);
 
-  m_program = glCreateProgram();
-  for(const GLuint shader : shaders) glAttachShader(m_program, shader);
-  glLinkProgram(m_program);
+  m_id = glCreateProgram();
+  for(const GLuint shader : shaders) glAttachShader(m_id, shader);
+  
+  // glProgramParameteri(m_id, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+
+  glLinkProgram(m_id);
 
   for(const GLuint shader : shaders) {
-    glDetachShader(m_program, shader);
+    glDetachShader(m_id, shader);
     glDeleteShader(shader);
   }
 
-  try { CheckLink(m_program); }
-  catch(...) { glDeleteProgram(m_program); throw; }
+  try { CheckLink(m_id); }
+  catch(...) {
+    glDeleteProgram(m_id);
+    LogError("[SHADER ERROR]: failed to link program");
+  }
   
-  m_uniformLocations = CacheUniforms(m_program);
-  s_nextID += 1;
+  m_uniformLocations = CacheUniforms(m_id);
+
+  GPU::VRAMInUse += GPU::GetShaderVRAMFootprint(m_id);
 }
 Shader::~Shader() {
-  if(m_program != 0) glDeleteProgram(m_program);
+  if(m_id != 0) glDeleteProgram(m_id);
 }
 
 Shader::Shader(Shader &&_o) noexcept
 : m_name(std::move(_o.m_name)),
   m_id(std::exchange(_o.m_id, 0)),
-  m_program(std::exchange(_o.m_program, 0)),
   m_uniformLocations(std::move(_o.m_uniformLocations)) {}
 Shader &Shader::operator=(Shader &&_o) noexcept {
   if(this != &_o) {
-    if(m_program != 0) glDeleteProgram(m_program);
+    if(m_id != 0) glDeleteProgram(m_id);
 
     m_name             = std::move(_o.m_name);
     m_id               = std::exchange(_o.m_id, 0);
-    m_program          = std::exchange(_o.m_program, 0);
     m_uniformLocations = std::move(_o.m_uniformLocations);
   }
   return *this;
@@ -55,7 +60,7 @@ Shader &Shader::operator=(Shader &&_o) noexcept {
 
 
 void Shader::use() const noexcept {
-  glUseProgram(m_program);
+  glUseProgram(m_id);
 }
 
 void Shader::setUniform(UniformLocation _loc, const glm::mat3 &_matrix) const {
@@ -98,6 +103,10 @@ Shader::UniformLocation Shader::getUniform(const std::string &_name) const noexc
 
 
 std::vector<GLuint> Shader::GetShaders(const std::string &_name) {
+  if(std::filesystem::exists(s_shaderFolder/_name) == false) {
+    LogError(std::format("[SHADER ERROR]: Shader folder not found: ({})\n", _name));
+  }
+
   std::vector<GLuint> shaders;
   shaders.reserve(3);
 
@@ -119,30 +128,29 @@ std::vector<GLuint> Shader::GetShaders(const std::string &_name) {
     std::stringstream ss;
     ss << file.rdbuf();
     const std::string str = ss.str();
-    shaders.push_back(CompileShader(type, str.c_str()));
+    shaders.push_back(Compile(type, str.c_str()));
   }
 
   return shaders;
 }
-GLuint Shader::CompileShader(GLenum _type, const char *_src) {
-  GLuint m_program = glCreateShader(_type);
-
-  glShaderSource(m_program, 1, &_src, nullptr);
-  glCompileShader(m_program);
+GLuint Shader::Compile(GLenum _type, const char *_src) {
+  GLuint shaderID = glCreateShader(_type); // Renamed from m_id to avoid confusion
+  glShaderSource(shaderID, 1, &_src, nullptr);
+  glCompileShader(shaderID);
 
   GLint success;
-  glGetShaderiv(m_program, GL_COMPILE_STATUS, &success);
+  glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
   if(!success) {
     char log[512];
-    glGetShaderInfoLog(m_program, 512, nullptr, log);
-
-    glDeleteShader(m_program);
-
-    std::cout << "[SHADER ERROR]: Failed to compile shader.\nLog: " + std::string(log);
-    throw std::runtime_error("Failed to compile shader.\nLog: " + std::string(log));
+    // Zero-initialize the buffer to prevent string conversion from reading out of bounds
+    std::fill(std::begin(log), std::end(log), '\0'); 
+    
+    glGetShaderInfoLog(shaderID, 511, nullptr, log); // Leave the last byte as safe null terminator
+    glDeleteShader(shaderID);
+    
+    LogError("[SHADER ERROR]: Failed to compile shader.\n\tLog: " + std::string(log) + '\n');
   }
-
-  return m_program;
+  return shaderID;
 }
 
 std::unordered_map<std::string, GLint> Shader::CacheUniforms(GLuint _program) {
@@ -203,8 +211,11 @@ void Shader::CheckLink(GLuint _program) {
 
   GLint logLength = 0;
   glGetProgramiv(_program, GL_INFO_LOG_LENGTH, &logLength);
-  std::string log(static_cast<size_t>(std::max(logLength, 1)), '\0');
+  
+  if(logLength <= 0) logLength = 512; 
+  
+  std::string log(static_cast<size_t>(logLength), '\0'); 
   glGetProgramInfoLog(_program, logLength, nullptr, log.data());
 
-  throw std::runtime_error("[SHADER ERROR]: Failed to link m_program.\nLog: " + log);
+  LogError("[SHADER ERROR]: Failed to link program.\n\tLog: " + log + '\n');
 }

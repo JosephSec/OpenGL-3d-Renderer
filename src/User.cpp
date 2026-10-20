@@ -62,38 +62,38 @@ void User::init() {
 void User::update() {
   User::Cursor::update();
 
-  Renderer::Camera *camera = Renderer::Core::camera;
+  // Renderer::Camera *camera = Renderer::Core::camera;
 
-  if(flyThroughControl == true) {
-    glm::vec3 moveDir = glm::vec3(0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
-    if(glm::length(moveDir) != 0) {
-      camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * 8.0f * System::deltaTime;
-    }
+  // if(flyThroughControl == true) {
+  //   glm::vec3 moveDir = glm::vec3(0);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
+  //   if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
+  //   if(glm::length(moveDir) != 0) {
+  //     camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * 8.0f * System::deltaTime;
+  //   }
 
-    if(glm::length(glm::vec2(User::Cursor::delta)) != 0) {
-      const glm::vec2 lookDelta = -glm::vec2(User::Cursor::delta) * System::deltaTime;
+  //   if(glm::length(glm::vec2(User::Cursor::delta)) != 0) {
+  //     const glm::vec2 lookDelta = -glm::vec2(User::Cursor::delta) * System::deltaTime;
 
-      const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
-      const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
-      camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
-    }
+  //     const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
+  //     const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+  //     camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
+  //   }
 
-    Renderer::Core::UpdateViewMatrix();
-  }
-  else if(panningControl == true) {
-    if(glm::length(glm::vec2(User::Cursor::delta)) != 0) {
-      const glm::vec2 lookDelta = glm::vec2(User::Cursor::delta.x, -User::Cursor::delta.y) * System::deltaTime;
-      camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
+  //   Renderer::Core::UpdateViewMatrix();
+  // }
+  // else if(panningControl == true) {
+  //   if(glm::length(glm::vec2(User::Cursor::delta)) != 0) {
+  //     const glm::vec2 lookDelta = glm::vec2(User::Cursor::delta.x, -User::Cursor::delta.y) * System::deltaTime;
+  //     camera->transform.position -= camera->transform.rotation * glm::vec3(lookDelta.x, lookDelta.y, 0);
 
-      Renderer::Core::UpdateViewMatrix();
-    }
-  }
+  //     Renderer::Core::UpdateViewMatrix();
+  //   }
+  // }
 }
 
 void User::HandleFocusLost() {
@@ -108,29 +108,8 @@ void User::HandleKeyPressed(const sf::Event::KeyPressed *_keyPressed) {
       Cursor::lockState = CursorLockMode::None;
     }
   }
-
-  else if(_keyPressed->code == sf::Keyboard::Key::F1) {
-    const GLint curPolygonMode = Renderer::Core::GetScenePolygonMode();
-    switch(curPolygonMode) {
-      case GL_FILL: {
-        Renderer::Core::SetScenePolygonMode(GL_LINE);
-        break;
-      }
-      case GL_LINE: {
-        Renderer::Core::SetScenePolygonMode(GL_FILL);
-        break;
-      }
-    }
-  }
   
-  else if(_keyPressed->code == sf::Keyboard::Key::X) {
-    std::stringstream ss;
-
-    ss << "Delta Time: " << System::deltaTime << '\n' <<
-          "Frames Per Second: " << (1 / System::deltaTime) << '\n';
-
-    std::cout << ss.str();
-  }
+  // else if(_keyPressed->code == sf::Keyboard::Key::X) 
 }
 void User::HandleMouseButtonPressed(const sf::Event::MouseButtonPressed *_mouseButtonPressed) {
   if(Renderer::Core::window->hasFocus() == true) Cursor::lockState = CursorLockMode::Confined;

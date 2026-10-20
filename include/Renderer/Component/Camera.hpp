@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Renderer/Core/API.hpp>
+#include <Renderer/API.hpp>
 
-#include <Renderer/Component/Transform.hpp>
+#include <Renderer/Core/Transform.hpp>
 
 
 namespace Renderer {
