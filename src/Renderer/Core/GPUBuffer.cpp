@@ -1,7 +1,7 @@
 #include <Renderer/Core/GPUBuffer.hpp>
 using namespace Renderer;
 
-#include <Renderer/Debug/GPU.hpp>
+#include <Renderer/Hardware/GPU.hpp>
 
 
 GPUBuffer::GPUBuffer() : m_id(0), m_size(0), m_capacity(0) {}

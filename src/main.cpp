@@ -5,18 +5,21 @@
 #include <Renderer/Core/Shader.hpp>
 #include <Renderer/Core/Mesh.hpp>
 #include <Renderer/Component/Camera.hpp>
-
 #include <Renderer/Debug/Graph.hpp>
-#include <Renderer/Debug/GPU.hpp>
+#include <Renderer/Hardware/GPU.hpp>
+#include <Renderer/Hardware/Monitor.hpp>
+
+#include <Editor/UIButton.hpp>
 
 #include <iostream>
 
 
 static Renderer::LineGraph fpsGraph(60, 0, 240.0f);
-static float plotTime = 1.0f / 30.0f;
-static float timeTillPlot = plotTime;
-
 static Renderer::LineGraph vramGraph(60, 0, 1);
+static bool metricsEnabled = false;
+
+static Editor::UIButton metricsButton(glm::vec4{15,15, 25,25}, glm::vec4(1));
+static sf::Texture metricsTexture;
 
 
 int main(int argc, char *argv[]) {
@@ -27,62 +30,35 @@ int main(int argc, char *argv[]) {
   Renderer::Mesh mesh; {
     mesh();
 
-    constexpr uint32_t triCount = 1'000'000;
-    constexpr float depth = 50.0f;                    // distance in front of the camera
-    constexpr float fovX  = glm::radians(90.0f);      // horizontal FOV
-    const float aspect = float(Renderer::Core::windowSize.x) / Renderer::Core::windowSize.y;
-
-    // View rectangle at that depth
-    const float halfW = depth * std::tan(fovX * 0.5f);   // tan(45°) = 1, so halfW == depth at 90°
-    const float halfH = halfW / aspect;
-
-    // Grid with the same aspect ratio as the window, so cells are roughly square
-    const uint32_t cols = static_cast<uint32_t>(std::ceil(std::sqrt(triCount * aspect)));
-    const uint32_t rows = (triCount + cols - 1) / cols;
-
-    const float cellW = (2.0f * halfW) / cols;
-    const float cellH = (2.0f * halfH) / rows;
-    const float triW  = cellW * 0.9f;
-    const float triH  = cellH * 0.9f;
-
-    std::vector<Renderer::Mesh::Vertex> vertices;
-    std::vector<Renderer::Mesh::Index> indices;      // must be uint32_t
-    vertices.reserve(size_t(triCount) * 3);
-    indices.reserve(size_t(triCount) * 3);
-
-    for(uint32_t i = 0; i < triCount; i++) {
-      const float cx = -halfW + (i % cols + 0.5f) * cellW;
-      const float cy = -halfH + (i / cols + 0.5f) * cellH;
-      const float z  = -depth;
-      const uint32_t base = i * 3;
-
-      vertices.push_back({{cx - triW * 0.5f, cy - triH * 0.5f, z}, {1,0,0,1}});
-      vertices.push_back({{cx,               cy + triH * 0.5f, z}, {0,1,0,1}});
-      vertices.push_back({{cx + triW * 0.5f, cy - triH * 0.5f, z}, {0,0,1,1}});
-
-      indices.push_back(base + 0);
-      indices.push_back(base + 1);
-      indices.push_back(base + 2);
-    }
-
-    mesh.setVertices(vertices);
-    mesh.setIndices(indices);
+    mesh.setVertices({
+      Renderer::Mesh::Vertex{{-1,-1, 0}, {1,0,0,1}},
+      Renderer::Mesh::Vertex{{ 0, 1, 0}, {0,1,0,1}},
+      Renderer::Mesh::Vertex{{ 1,-1, 0}, {0,0,1,1}},
+    });
+    mesh.setIndices({0,1,2});
   }
 
   Renderer::Shader shader("Unlit");
 
-  
-  std::cout << "GPU: " << Renderer::Core::GetGPUName() << " | Available VRAM: " << Renderer::GPU::VRAMCapacity / (1024 * 1024) << "MB\n";
+  bool x = metricsTexture.loadFromFile(System::PATH+"/assets/editor/textures/metric.png");
+  metricsButton.setTexture(&metricsTexture);
+
+  sf::Font font(System::PATH+"/assets/Roboto.ttf");
+
+
+  std::cout << "Active Monitor Refresh Rate: " << Renderer::Monitor::GetCurrentMonitorRefreshRate() << '\n';
+  std::cout << "GPU: " << Renderer::GPU::GetGPUName() << " | Available VRAM: " << Renderer::GPU::VRAMCapacity / (1024 * 1024) << "MB\n";
   std::cout << "Used VRAM: " << Renderer::GPU::VRAMInUse / 1000 << "KB | " << Renderer::GPU::GetUsedVRAM() << "%\n";
 
 
+  fpsGraph.max = Renderer::Monitor::RefreshRate;
   fpsGraph.setTimerLength(1 / 30.0f);
 
   vramGraph.max = Renderer::GPU::VRAMCapacity;
   vramGraph.setTimerLength(1 / 30.0f);
 
 
-  Renderer::Camera camera;
+  Renderer::Camera *camera = new Renderer::Camera();
 
 
   while(Renderer::Core::window->isOpen()) {
@@ -98,9 +74,10 @@ int main(int argc, char *argv[]) {
         if(keyPressed->code == sf::Keyboard::Key::Space) {
           static bool cap = false;
           cap = !cap;
-          Renderer::Core::window->setFramerateLimit(cap? 60 : 0);
+          Renderer::Core::window->setFramerateLimit(cap? Renderer::Monitor::RefreshRate / 2 : 0);
         }
         else if(keyPressed->code == sf::Keyboard::Key::X && keyPressed->alt) fpsGraph.log();
+        else if(keyPressed->code == sf::Keyboard::Key::F1) metricsEnabled = !metricsEnabled;
       }
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
       else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
@@ -108,6 +85,44 @@ int main(int argc, char *argv[]) {
 
     { //Update
       System::update();
+
+      { //Check if window moved
+        static sf::Vector2i windowLastPosition = Renderer::Core::window->getPosition();
+        const sf::Vector2i windowCurrentPosition = Renderer::Core::window->getPosition();
+        if(windowCurrentPosition != windowLastPosition) {
+          windowLastPosition = windowCurrentPosition;
+          Renderer::Monitor::RefreshRate = Renderer::Monitor::GetCurrentMonitorRefreshRate();
+          fpsGraph.max = Renderer::Monitor::RefreshRate;
+        }
+      } //Check if window moved
+
+      if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) { //Camera Control
+        static constexpr float slowModeSpeed = 8;
+        static constexpr float fastModeSpeed = 15;
+
+        glm::vec3 moveDir = glm::vec3(0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) moveDir -= glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) moveDir -= glm::vec3(1,0,0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) moveDir += glm::vec3(0,0,1);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) moveDir += glm::vec3(1,0,0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) moveDir -= glm::vec3(0,1,0);
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) moveDir += glm::vec3(0,1,0);
+        if(glm::length(moveDir) != 0) {
+          const float speed = System::deltaTime * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)? fastModeSpeed : slowModeSpeed);
+          camera->transform.position += (camera->transform.rotation * glm::normalize(moveDir)) * speed;
+        }
+
+        if(glm::length(glm::vec2(User::Cursor::delta)) != 0) {
+          const glm::vec2 lookDelta = -glm::vec2(User::Cursor::delta) * System::deltaTime;
+
+          const glm::quat pitch = glm::angleAxis(lookDelta.y, glm::vec3(1,0,0));
+          const glm::quat yaw = glm::angleAxis(lookDelta.x, glm::vec3(0,1,0));
+          camera->transform.rotation = glm::normalize(yaw * camera->transform.rotation * pitch);
+        }
+      } //Camera Control
+
+
+
       User::update();
     } //Update
 
@@ -127,8 +142,8 @@ int main(int argc, char *argv[]) {
 
 
         shader.use();
-        shader.setUniform("uProj", camera.getProjectionMatrix(Renderer::Core::windowSize));
-        shader.setUniform("uView", camera.getViewMatrix());
+        shader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
+        shader.setUniform("uView", camera->getViewMatrix());
         shader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
 
         mesh.use();
@@ -144,19 +159,31 @@ int main(int argc, char *argv[]) {
           Renderer::Core::window->pushGLStates();
         } //GL Init
 
+
         fpsGraph.update(1.0f / System::deltaTime, System::deltaTime);
         vramGraph.update(Renderer::GPU::VRAMInUse, System::deltaTime);
 
-        
-        sf::FloatRect area = {{15.0f, 15.0f}, {350.0f, 150.0f}};
+        metricsButton.setColor(glm::vec4{1,1,1, metricsEnabled? 1 : .2f});
+        metricsButton.draw();
 
-        sf::RectangleShape shape(area.size);
-        shape.setPosition(area.position);
-        shape.setFillColor(sf::Color(25,25,25,200));
-        Renderer::Core::window->draw(shape);
+        if(metricsEnabled == true) {
+          sf::FloatRect area = {{15.0f, 15.0f}, {350.0f, 150.0f}};
+          area.position = sf::Vector2f{static_cast<float>(Renderer::Core::windowSize.x),static_cast<float>(Renderer::Core::windowSize.y)} - area.position - area.size;
 
-        fpsGraph.draw(area, sf::Color::Blue, 240.0f);
-        vramGraph.draw(area, sf::Color::Red, Renderer::GPU::VRAMCapacity);
+          sf::RectangleShape shape(area.size);
+          shape.setPosition(area.position);
+          shape.setFillColor(sf::Color(25,25,25,200));
+          Renderer::Core::window->draw(shape);
+
+          fpsGraph.draw(area, sf::Color::Blue);
+          vramGraph.draw(area, sf::Color::Red);
+
+          sf::Text text(font);
+          text.setString(std::to_string(static_cast<int>(1.0f / System::deltaTime)));
+          text.setCharacterSize(15);
+          text.setPosition(fpsGraph.getPlotPosition(area, fpsGraph.getSize() - 1) - text.getLocalBounds().size);
+          Renderer::Core::window->draw(text);
+        }
 
         Renderer::Core::window->popGLStates();
       } //UI

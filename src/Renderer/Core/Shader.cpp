@@ -2,7 +2,7 @@
 using namespace Renderer;
 
 #include <Renderer/Debug.hpp>
-#include <Renderer/Debug/GPU.hpp>
+#include <Renderer/Hardware/GPU.hpp>
 
 #include <utility>
 #include <fstream>

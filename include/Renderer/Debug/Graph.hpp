@@ -16,10 +16,15 @@ namespace Renderer {
     void log() const noexcept;
 
     void update(float _x, float _dt);
-    void draw(const sf::FloatRect _rect, const sf::Color _color, float _max) const;
+    void draw(const sf::FloatRect &_rect, const sf::Color _color) const;
 
     void resize(int _size);
     void setTimerLength(float _seconds);
+
+    inline int getSize() const noexcept {
+      return m_size;
+    }
+    sf::Vector2f getPlotPosition(const sf::FloatRect &_rect, int _index) const;
 
 
     float min = 0;

@@ -19,9 +19,6 @@ namespace Renderer {
 
     static void UpdateWindowSize();
 
-    static int64_t GetVRAMCapacity();
-    static std::string GetGPUName();
-
 
     static sf::RenderWindow *window;
     static glm::ivec2 windowSize;

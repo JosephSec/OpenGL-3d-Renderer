@@ -14,6 +14,9 @@ namespace Renderer {
     static uint64_t VRAMInUse;
 
 
+    static std::string GetGPUName();
+
+    static int64_t GetVRAMCapacity();
     static float GetUsedVRAM();
 
     static uint64_t GetShaderVRAMFootprint(GLuint _program);
