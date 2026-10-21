@@ -28,6 +28,13 @@ namespace Renderer {
     Mesh();
     ~Mesh();
 
+    Mesh(Mesh &&_o);
+    Mesh &operator=(Mesh &&_o);
+
+    Mesh(Mesh &) = delete;
+    Mesh &operator=(Mesh &) = delete;
+
+
     void operator()() noexcept;
 
     void use() const noexcept;

@@ -44,7 +44,7 @@ void PerformanceOverlay::draw(const sf::Font &_font) {
   text.setPosition(fpsGraph.getPlotPosition(Rect, fpsGraph.getSize() - 1) - text.getLocalBounds().size);
   Renderer::Core::window->draw(text);
   
-  text.setString(std::to_string(static_cast<int>(vramGraph.getValue())));
+  text.setString(std::to_string(static_cast<int>(vramGraph.getValue()) / 1000) + "KB");
   text.setFillColor(sf::Color::Red);
   text.setPosition(vramGraph.getPlotPosition(Rect, vramGraph.getSize() - 1) - text.getLocalBounds().size);
   Renderer::Core::window->draw(text);

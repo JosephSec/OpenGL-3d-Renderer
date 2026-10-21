@@ -7,7 +7,23 @@ Mesh::~Mesh() {
   if(m_vao != 0) glDeleteVertexArrays(1, &m_vao);
 }
 
+Mesh::Mesh(Mesh &&_o) {
+  if(this != &_o) {
+    
+
+    m_vertices = std::move(_o.m_vertices);
+    m_indices = std::move(_o.m_indices);
+
+    m_vao = std::exchange(_o.m_vao, 0);
+    m_vbo = std::move(m_vbo);
+    m_ebo = std::move(m_ebo);
+  }
+}
+
+
 void Mesh::operator()() noexcept {
+  if(m_vao != 0) glDeleteVertexArrays(1, &m_vao);
+
   glCreateVertexArrays(1, &m_vao);
 
   m_vbo();

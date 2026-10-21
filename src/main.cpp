@@ -8,6 +8,7 @@
 #include <Renderer/Debug/Graph.hpp>
 #include <Renderer/Hardware/GPU.hpp>
 #include <Renderer/Hardware/Monitor.hpp>
+#include <Renderer/Pipeline/GPUMemoryManager.hpp>
 
 #include <Editor/UI/PerformanceOverlay.hpp>
 #include <Editor/UIButton.hpp>
@@ -18,15 +19,7 @@
 #include <iostream>
 
 
-static Editor::UIButton metricsButton(glm::vec4{15,15, 25,25}, glm::vec4(1));
-static sf::Texture metricsTexture;
-
-
-struct Body {
-  glm::vec3 transform; //xy - position | z - radius
-  glm::vec3 color;
-};
-
+static bool wireframeMode = false;
 int main(int argc, char *argv[]) {
   System::init();
   Renderer::Core::init(true);
@@ -34,71 +27,62 @@ int main(int argc, char *argv[]) {
 
   Editor::PerformanceOverlay::init();
 
-  Renderer::Mesh mesh; {
-    mesh();
-
-    mesh.setVertices({
+  Renderer::Mesh *mesh = Renderer::GPUMemoryManager::CreateMesh(); {
+    mesh->setVertices({
       Renderer::Mesh::Vertex{{-1,-1, 0}, {1,0,0,1}},
       Renderer::Mesh::Vertex{{ 0, 1, 0}, {0,1,0,1}},
       Renderer::Mesh::Vertex{{ 1,-1, 0}, {0,0,1,1}},
     });
-    mesh.setIndices({0,1,2});
+    mesh->setIndices({0,1,2});
   }
 
-  Renderer::Shader shader("Unlit");
-
-  bool x = metricsTexture.loadFromFile(System::PATH+"/assets/editor/textures/metric.png");
-  metricsButton.setTexture(&metricsTexture);
+  Renderer::Shader unlitShader("Unlit");
 
   sf::Font font(System::PATH+"/assets/Roboto.ttf");
+
+  Renderer::Camera *camera = new Renderer::Camera();
+
+
+  Renderer::Shader *waterShader = Renderer::GPUMemoryManager::CreateShader("Water");
+  Renderer::Mesh *water = Renderer::GPUMemoryManager::CreateMesh(); {
+    const glm::ivec2 grid = glm::ivec2{1419,1419};
+    const float scale = .1f;
+
+    std::vector<Renderer::Mesh::Vertex> vertices;
+    for(int y = 0; y <= grid.y; y++) {
+      for(int x = 0; x <= grid.x; x++) {
+        vertices.push_back(Renderer::Mesh::Vertex{
+          glm::vec3{x - static_cast<float>(grid.x + 1) / 2.0f, 0, -(y - static_cast<float>(grid.y + 1) / 2.0f)} * scale,
+          {0,0,1,1},
+        });
+      }
+    }
+    water->setVertices(vertices);
+
+    std::vector<Renderer::Mesh::Index> indices;
+    for(int y = 0; y < grid.y; y++) {
+      for(int x = 0; x < grid.x; x++) {
+        const Renderer::Mesh::Index a = x + y * (grid.x + 1);
+        const Renderer::Mesh::Index b = a + grid.x + 1;
+        const Renderer::Mesh::Index c = b + 1;
+        const Renderer::Mesh::Index d = a + 1;
+        
+        indices.push_back(a);
+        indices.push_back(b);
+        indices.push_back(c);
+
+        indices.push_back(a);
+        indices.push_back(c);
+        indices.push_back(d);
+      }
+    }
+    water->setIndices(indices);
+  }
 
 
   std::cout << "Active Monitor Refresh Rate: " << Renderer::Monitor::GetCurrentMonitorRefreshRate() << '\n';
   std::cout << "GPU: " << Renderer::GPU::GetGPUName() << " | Available VRAM: " << Renderer::GPU::VRAMCapacity / (1024 * 1024) << "MB\n";
   std::cout << "Used VRAM: " << Renderer::GPU::VRAMInUse / 1000 << "KB | " << Renderer::GPU::GetUsedVRAM() << "%\n";
-
-
-  Renderer::Camera *camera = new Renderer::Camera();
-
-
-  std::vector<Body> bodies(1000); {
-    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
-    std::uniform_real_distribution<float> rand(0,1);
-
-    for(Body &body : bodies) {
-      body.transform = {
-        rand(gen) * Renderer::Core::windowSize.x,
-        rand(gen) * Renderer::Core::windowSize.y,
-        10 + rand(gen) * 40.0f
-      };
-      body.color = {
-        .1f + rand(gen) * .9f,
-        .1f + rand(gen) * .9f,
-        .1f + rand(gen) * .9f
-      };
-    }
-  }
-  Renderer::GPUBuffer bodiesBuffer;
-  bodiesBuffer();
-  bodiesBuffer.upload(bodies.size() * sizeof(Body), bodies.data(), GL_DYNAMIC_DRAW);
-
-  Renderer::Shader spaceShader("Space");
-  GLuint spaceVAO = 0; {
-    glCreateVertexArrays(1, &spaceVAO);
-
-    glVertexArrayVertexBuffer(spaceVAO, 0, bodiesBuffer.id(), 0, sizeof(Body));
-
-
-    glVertexArrayAttribFormat(spaceVAO, 0, 2, GL_FLOAT, GL_FALSE, offsetof(Body, transform));
-    glVertexArrayAttribBinding(spaceVAO, 0, 0);
-    glEnableVertexArrayAttrib(spaceVAO, 0);
-
-    glVertexArrayAttribFormat(spaceVAO, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Body, color));
-    glVertexArrayAttribBinding(spaceVAO, 1, 0);
-    glEnableVertexArrayAttrib(spaceVAO, 1);
-  }
-
-
   while(Renderer::Core::window->isOpen()) {
     while(const auto &eventOpt = Renderer::Core::window->pollEvent()) {
       const auto &event = *eventOpt;
@@ -115,6 +99,10 @@ int main(int argc, char *argv[]) {
           Renderer::Core::window->setFramerateLimit(cap? Renderer::Monitor::RefreshRate / 2 : 0);
         }
         else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::PerformanceOverlay::ToggleEnabled();
+        else if(keyPressed->code == sf::Keyboard::Key::F2) {
+          wireframeMode = !wireframeMode;
+          glPolygonMode(GL_FRONT_AND_BACK, wireframeMode? GL_LINE : GL_FILL);
+        }
       }
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
       else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
@@ -175,16 +163,34 @@ int main(int argc, char *argv[]) {
           glCullFace(GL_BACK);
           glFrontFace(GL_CW);
           glDisable(GL_BLEND);
+
+          glPolygonMode(GL_FRONT_AND_BACK, wireframeMode? GL_LINE : GL_FILL);
         } //GL Init
 
 
-        shader.use();
-        shader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
-        shader.setUniform("uView", camera->getViewMatrix());
-        shader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
+        { //Triangle
+          unlitShader.use();
+          unlitShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
+          unlitShader.setUniform("uView", camera->getViewMatrix());
+          unlitShader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
 
-        mesh.use();
-        mesh.draw();
+          mesh->use();
+          mesh->draw();
+        } //Triangle
+        { //Water
+          waterShader->use();
+          waterShader->setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
+          waterShader->setUniform("uView", camera->getViewMatrix());
+          waterShader->setUniform("uModel", Renderer::Transform({0,-3,0}).getModelMatrix());
+
+          static float t = 0;
+          t += System::deltaTime;
+          waterShader->setUniform("t", t);
+
+
+          water->use();
+          water->draw();
+        } //Water
       } //Scene
       { //UI
         { //GL Init
@@ -193,12 +199,11 @@ int main(int argc, char *argv[]) {
           glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
           glUseProgram(0);
 
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
           Renderer::Core::window->pushGLStates();
         } //GL Init
 
-
-        metricsButton.setColor(glm::vec4{1,1,1, Editor::PerformanceOverlay::IsEnabled? 1 : .2f});
-        metricsButton.draw();
 
         Editor::PerformanceOverlay::draw(font);
 
