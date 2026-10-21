@@ -24,6 +24,9 @@ namespace Renderer {
     inline int getSize() const noexcept {
       return m_size;
     }
+    inline float getValue(int _index = -1) const noexcept {
+      return m_data[_index > -1? _index : (m_size - 1)];
+    }
     sf::Vector2f getPlotPosition(const sf::FloatRect &_rect, int _index) const;
 
 

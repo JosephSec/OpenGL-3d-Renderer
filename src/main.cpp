@@ -9,23 +9,30 @@
 #include <Renderer/Hardware/GPU.hpp>
 #include <Renderer/Hardware/Monitor.hpp>
 
+#include <Editor/UI/PerformanceOverlay.hpp>
 #include <Editor/UIButton.hpp>
+
+#include <random>
+#include <chrono>
 
 #include <iostream>
 
-
-static Renderer::LineGraph fpsGraph(60, 0, 240.0f);
-static Renderer::LineGraph vramGraph(60, 0, 1);
-static bool metricsEnabled = false;
 
 static Editor::UIButton metricsButton(glm::vec4{15,15, 25,25}, glm::vec4(1));
 static sf::Texture metricsTexture;
 
 
+struct Body {
+  glm::vec3 transform; //xy - position | z - radius
+  glm::vec3 color;
+};
+
 int main(int argc, char *argv[]) {
   System::init();
   Renderer::Core::init(true);
   Renderer::Core::window->setActive(true);
+
+  Editor::PerformanceOverlay::init();
 
   Renderer::Mesh mesh; {
     mesh();
@@ -51,14 +58,45 @@ int main(int argc, char *argv[]) {
   std::cout << "Used VRAM: " << Renderer::GPU::VRAMInUse / 1000 << "KB | " << Renderer::GPU::GetUsedVRAM() << "%\n";
 
 
-  fpsGraph.max = Renderer::Monitor::RefreshRate;
-  fpsGraph.setTimerLength(1 / 30.0f);
-
-  vramGraph.max = Renderer::GPU::VRAMCapacity;
-  vramGraph.setTimerLength(1 / 30.0f);
-
-
   Renderer::Camera *camera = new Renderer::Camera();
+
+
+  std::vector<Body> bodies(1000); {
+    std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+    std::uniform_real_distribution<float> rand(0,1);
+
+    for(Body &body : bodies) {
+      body.transform = {
+        rand(gen) * Renderer::Core::windowSize.x,
+        rand(gen) * Renderer::Core::windowSize.y,
+        10 + rand(gen) * 40.0f
+      };
+      body.color = {
+        .1f + rand(gen) * .9f,
+        .1f + rand(gen) * .9f,
+        .1f + rand(gen) * .9f
+      };
+    }
+  }
+  Renderer::GPUBuffer bodiesBuffer;
+  bodiesBuffer();
+  bodiesBuffer.upload(bodies.size() * sizeof(Body), bodies.data(), GL_DYNAMIC_DRAW);
+
+  Renderer::Shader spaceShader("Space");
+  GLuint spaceVAO = 0; {
+    glCreateVertexArrays(1, &spaceVAO);
+
+    glVertexArrayVertexBuffer(spaceVAO, 0, bodiesBuffer.id(), 0, sizeof(Body));
+
+
+    glVertexArrayAttribFormat(spaceVAO, 0, 2, GL_FLOAT, GL_FALSE, offsetof(Body, transform));
+    glVertexArrayAttribBinding(spaceVAO, 0, 0);
+    glEnableVertexArrayAttrib(spaceVAO, 0);
+
+    glVertexArrayAttribFormat(spaceVAO, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Body, color));
+    glVertexArrayAttribBinding(spaceVAO, 1, 0);
+    glEnableVertexArrayAttrib(spaceVAO, 1);
+  }
 
 
   while(Renderer::Core::window->isOpen()) {
@@ -76,8 +114,7 @@ int main(int argc, char *argv[]) {
           cap = !cap;
           Renderer::Core::window->setFramerateLimit(cap? Renderer::Monitor::RefreshRate / 2 : 0);
         }
-        else if(keyPressed->code == sf::Keyboard::Key::X && keyPressed->alt) fpsGraph.log();
-        else if(keyPressed->code == sf::Keyboard::Key::F1) metricsEnabled = !metricsEnabled;
+        else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::PerformanceOverlay::ToggleEnabled();
       }
       else if(const auto *mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) User::HandleMouseButtonPressed(mouseButtonPressed);
       else if(const auto *mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) User::HandleMouseButtonReleased(mouseButtonReleased);
@@ -92,7 +129,7 @@ int main(int argc, char *argv[]) {
         if(windowCurrentPosition != windowLastPosition) {
           windowLastPosition = windowCurrentPosition;
           Renderer::Monitor::RefreshRate = Renderer::Monitor::GetCurrentMonitorRefreshRate();
-          fpsGraph.max = Renderer::Monitor::RefreshRate;
+          Editor::PerformanceOverlay::fpsGraph.max = Renderer::Monitor::RefreshRate;
         }
       } //Check if window moved
 
@@ -121,7 +158,7 @@ int main(int argc, char *argv[]) {
         }
       } //Camera Control
 
-
+      Editor::PerformanceOverlay::update(System::deltaTime);
 
       User::update();
     } //Update
@@ -160,30 +197,10 @@ int main(int argc, char *argv[]) {
         } //GL Init
 
 
-        fpsGraph.update(1.0f / System::deltaTime, System::deltaTime);
-        vramGraph.update(Renderer::GPU::VRAMInUse, System::deltaTime);
-
-        metricsButton.setColor(glm::vec4{1,1,1, metricsEnabled? 1 : .2f});
+        metricsButton.setColor(glm::vec4{1,1,1, Editor::PerformanceOverlay::IsEnabled? 1 : .2f});
         metricsButton.draw();
 
-        if(metricsEnabled == true) {
-          sf::FloatRect area = {{15.0f, 15.0f}, {350.0f, 150.0f}};
-          area.position = sf::Vector2f{static_cast<float>(Renderer::Core::windowSize.x),static_cast<float>(Renderer::Core::windowSize.y)} - area.position - area.size;
-
-          sf::RectangleShape shape(area.size);
-          shape.setPosition(area.position);
-          shape.setFillColor(sf::Color(25,25,25,200));
-          Renderer::Core::window->draw(shape);
-
-          fpsGraph.draw(area, sf::Color::Blue);
-          vramGraph.draw(area, sf::Color::Red);
-
-          sf::Text text(font);
-          text.setString(std::to_string(static_cast<int>(1.0f / System::deltaTime)));
-          text.setCharacterSize(15);
-          text.setPosition(fpsGraph.getPlotPosition(area, fpsGraph.getSize() - 1) - text.getLocalBounds().size);
-          Renderer::Core::window->draw(text);
-        }
+        Editor::PerformanceOverlay::draw(font);
 
         Renderer::Core::window->popGLStates();
       } //UI
