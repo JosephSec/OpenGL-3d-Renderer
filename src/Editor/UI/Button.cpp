@@ -1,5 +1,5 @@
-#include <Editor/UIButton.hpp>
-using namespace Editor;
+#include <Editor/UI/Button.hpp>
+using namespace Editor::UI;
 
 #include <Renderer/Core.hpp>
 

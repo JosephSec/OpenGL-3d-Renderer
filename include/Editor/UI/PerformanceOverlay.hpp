@@ -7,22 +7,25 @@
 
 
 namespace Editor {
-  class PerformanceOverlay {
-  public:
-    static bool IsEnabled;
+  namespace UI {
+    class PerformanceOverlay {
+    public:
+      static bool IsEnabled;
 
-    static sf::FloatRect Rect;
+      static sf::FloatRect Rect;
 
-    static Renderer::LineGraph fpsGraph;
-    static Renderer::LineGraph vramGraph;
+      static Renderer::LineGraph fpsGraph;
+      static Renderer::LineGraph vramGraph;
+      static Renderer::LineGraph testGraph;
 
 
-    static void init();
-    static void update(float _dt);
-    static void draw(const sf::Font &_font);
+      static void init();
+      static void update(float _dt);
+      static void draw(const sf::Font &_font);
 
-    static inline void ToggleEnabled(bool _enabled = !IsEnabled) {
-      IsEnabled = _enabled;
-    }
-  };
+      static inline void ToggleEnabled(bool _enabled = !IsEnabled) {
+        IsEnabled = _enabled;
+      }
+    };
+  }
 }

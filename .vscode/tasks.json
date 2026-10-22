@@ -16,9 +16,8 @@
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
         "${workspaceFolder}/src/Renderer/Debug/*.cpp",
         "${workspaceFolder}/src/Renderer/Hardware/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         
-        "${workspaceFolder}/src/Editor/*.cpp",
+        // "${workspaceFolder}/src/Editor/*.cpp",
         "${workspaceFolder}/src/Editor/UI/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
@@ -41,7 +40,7 @@
 
         "${workspaceFolder}/bin/render3d.dll",
         
-        "${workspaceFolder}/src/Editor/*.cpp",
+        // "${workspaceFolder}/src/Editor/*.cpp",
         "${workspaceFolder}/src/Editor/UI/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
@@ -65,7 +64,7 @@
         
         "${workspaceFolder}/bin/render3d.dll",
         
-        "${workspaceFolder}/src/Editor/*.cpp",
+        // "${workspaceFolder}/src/Editor/*.cpp",
         "${workspaceFolder}/src/Editor/UI/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
@@ -88,7 +87,6 @@
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
         "${workspaceFolder}/src/Renderer/Debug/*.cpp",
         "${workspaceFolder}/src/Renderer/Hardware/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         // "${workspaceFolder}/src/Renderer/Component/*.cpp",
         
         "-lsfml-graphics", "-lsfml-window", "-lsfml-system",
@@ -114,10 +112,9 @@
         "${workspaceFolder}/src/Renderer/Core/*.cpp",
         "${workspaceFolder}/src/Renderer/Debug/*.cpp",
         "${workspaceFolder}/src/Renderer/Hardware/*.cpp",
-        "${workspaceFolder}/src/Renderer/Pipeline/*.cpp",
         // "${workspaceFolder}/src/Renderer/Component/*.cpp",
         
-        "${workspaceFolder}/src/Editor/*.cpp",
+        // "${workspaceFolder}/src/Editor/*.cpp",
         "${workspaceFolder}/src/Editor/UI/*.cpp",
         
         "-lsfml-graphics-s", "-lsfml-window-s", "-lsfml-system-s",

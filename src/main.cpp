@@ -8,10 +8,9 @@
 #include <Renderer/Debug/Graph.hpp>
 #include <Renderer/Hardware/GPU.hpp>
 #include <Renderer/Hardware/Monitor.hpp>
-#include <Renderer/Pipeline/GPUMemoryManager.hpp>
 
 #include <Editor/UI/PerformanceOverlay.hpp>
-#include <Editor/UIButton.hpp>
+#include <Editor/UI/Button.hpp>
 
 #include <random>
 #include <chrono>
@@ -25,16 +24,7 @@ int main(int argc, char *argv[]) {
   Renderer::Core::init(true);
   Renderer::Core::window->setActive(true);
 
-  Editor::PerformanceOverlay::init();
-
-  // Renderer::Mesh *mesh = Renderer::GPUMemoryManager::CreateMesh(); {
-  //   mesh->setVertices({
-  //     Renderer::Mesh::Vertex{{-1,-1, 0}, {1,0,0,1}},
-  //     Renderer::Mesh::Vertex{{ 0, 1, 0}, {0,1,0,1}},
-  //     Renderer::Mesh::Vertex{{ 1,-1, 0}, {0,0,1,1}},
-  //   });
-  //   mesh->setIndices({0,1,2});
-  // }
+  Editor::UI::PerformanceOverlay::init();
 
   Renderer::Shader unlitShader("Unlit");
 
@@ -43,8 +33,10 @@ int main(int argc, char *argv[]) {
   Renderer::Camera *camera = new Renderer::Camera();
 
 
-  Renderer::Shader *waterShader = Renderer::GPUMemoryManager::CreateShader("Water");
-  Renderer::Mesh *water = Renderer::GPUMemoryManager::CreateMesh(); {
+  Renderer::Shader waterShader("Water");
+  Renderer::Mesh water; {
+    water();
+
     const glm::ivec2 grid = glm::ivec2{1419,1419};
     const float scale = .1f;
 
@@ -57,7 +49,7 @@ int main(int argc, char *argv[]) {
         };
       }
     }
-    water->setVertices(vertices);
+    water.setVertices(vertices);
 
     std::vector<Renderer::Mesh::Index> indices(grid.x * grid.y * 6);
     for(int y = 0; y < grid.y; y++) {
@@ -78,7 +70,7 @@ int main(int argc, char *argv[]) {
         indices[start + 5] = d;
       }
     }
-    water->setIndices(indices);
+    water.setIndices(indices);
   }
 
 
@@ -100,7 +92,7 @@ int main(int argc, char *argv[]) {
           cap = !cap;
           Renderer::Core::window->setFramerateLimit(cap? Renderer::Monitor::RefreshRate / 2 : 0);
         }
-        else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::PerformanceOverlay::ToggleEnabled();
+        else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::UI::PerformanceOverlay::ToggleEnabled();
         else if(keyPressed->code == sf::Keyboard::Key::F2) {
           wireframeMode = !wireframeMode;
           glPolygonMode(GL_FRONT_AND_BACK, wireframeMode? GL_LINE : GL_FILL);
@@ -119,7 +111,7 @@ int main(int argc, char *argv[]) {
         if(windowCurrentPosition != windowLastPosition) {
           windowLastPosition = windowCurrentPosition;
           Renderer::Monitor::RefreshRate = Renderer::Monitor::GetCurrentMonitorRefreshRate();
-          Editor::PerformanceOverlay::fpsGraph.max = Renderer::Monitor::RefreshRate;
+          Editor::UI::PerformanceOverlay::fpsGraph.max = Renderer::Monitor::RefreshRate;
         }
       } //Check if window moved
 
@@ -148,7 +140,7 @@ int main(int argc, char *argv[]) {
         }
       } //Camera Control
 
-      Editor::PerformanceOverlay::update(System::deltaTime);
+      Editor::UI::PerformanceOverlay::update(System::deltaTime);
 
       User::update();
     } //Update
@@ -180,18 +172,18 @@ int main(int argc, char *argv[]) {
         //   mesh->draw();
         // } //Triangle
         { //Water
-          waterShader->use();
-          waterShader->setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
-          waterShader->setUniform("uView", camera->getViewMatrix());
-          waterShader->setUniform("uModel", Renderer::Transform({0,-3,0}).getModelMatrix());
+          waterShader.use();
+          waterShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
+          waterShader.setUniform("uView", camera->getViewMatrix());
+          waterShader.setUniform("uModel", Renderer::Transform({0,-3,0}).getModelMatrix());
 
           static float t = 0;
           t += System::deltaTime;
-          waterShader->setUniform("t", t);
+          waterShader.setUniform("t", t);
 
 
-          water->use();
-          water->draw();
+          water.use();
+          water.draw();
         } //Water
       } //Scene
       { //UI
@@ -207,7 +199,7 @@ int main(int argc, char *argv[]) {
         } //GL Init
 
 
-        Editor::PerformanceOverlay::draw(font);
+        Editor::UI::PerformanceOverlay::draw(font);
 
         Renderer::Core::window->popGLStates();
       } //UI
