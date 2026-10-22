@@ -8,7 +8,7 @@ using namespace Editor;
 
 bool PerformanceOverlay::IsEnabled = true;
 
-sf::FloatRect PerformanceOverlay::Rect = sf::FloatRect{{15.0f, 15.0f}, {350.0f, 150.0f}};
+sf::FloatRect PerformanceOverlay::Rect = sf::FloatRect{{15.0f, 15.0f}, {350.0f, 60.0f}};
 
 Renderer::LineGraph PerformanceOverlay::fpsGraph(60, 0, 240.0f);
 Renderer::LineGraph PerformanceOverlay::vramGraph(60, 0, 1);
@@ -28,24 +28,36 @@ void PerformanceOverlay::update(float _dt) {
 void PerformanceOverlay::draw(const sf::Font &_font) {
   if(IsEnabled == false) return;
 
-  sf::RectangleShape shape(Rect.size);
-  shape.setPosition(Rect.position);
-  shape.setFillColor(sf::Color(25,25,25,200));
-  Renderer::Core::window->draw(shape);
+  const Renderer::LineGraph *lineGraphs[2] = {&fpsGraph, &vramGraph};
+  const sf::Color colors[2] = {sf::Color(0,0,255,100), sf::Color(255,0,0,100)};
 
-  fpsGraph.draw(Rect, sf::Color::Blue);
-  vramGraph.draw(Rect, sf::Color::Red);
+  const std::string names[2] = {"FPS", "VRAM"};
+  const float height = Rect.size.y / 2.0f;
+  const float graphWidth = Rect.size.x * .8f;
+
+
+  sf::RectangleShape shape(Rect.size);
 
   sf::Text text(_font);
   text.setCharacterSize(15);
 
-  text.setString(std::to_string(static_cast<int>(fpsGraph.getValue())));
-  text.setFillColor(sf::Color::Blue);
-  text.setPosition(fpsGraph.getPlotPosition(Rect, fpsGraph.getSize() - 1) - text.getLocalBounds().size);
-  Renderer::Core::window->draw(text);
-  
-  text.setString(std::to_string(static_cast<int>(vramGraph.getValue()) / 1000) + "KB");
-  text.setFillColor(sf::Color::Red);
-  text.setPosition(vramGraph.getPlotPosition(Rect, vramGraph.getSize() - 1) - text.getLocalBounds().size);
-  Renderer::Core::window->draw(text);
+  for(int i = 0; i < 2; i++) {
+    const sf::Vector2f start = Rect.position + sf::Vector2f{0, height + 5} * static_cast<float>(i);
+
+    shape.setPosition(start);
+    shape.setSize(sf::Vector2f{Rect.size.x, height});
+    shape.setFillColor(colors[i]);
+    Renderer::Core::window->draw(shape);
+
+    const sf::Vector2f textAreaCenter = start + sf::Vector2f{Rect.size.x - graphWidth, height} / 2.0f;
+
+    text.setString(names[i]);
+
+    const sf::FloatRect localBounds = text.getLocalBounds();
+    text.setPosition(textAreaCenter - localBounds.size / 2.0f - localBounds.position);
+    Renderer::Core::window->draw(text);
+
+
+    lineGraphs[i]->draw(sf::FloatRect{start + sf::Vector2f{Rect.size.x - graphWidth, 0}, sf::Vector2f{graphWidth, height}}, sf::Color::White);
+  }
 }

@@ -32,8 +32,8 @@ float height() {
 void main() {
   float h = height();
 
-  vec4 lowColor = vec4(.5,0,0,1);
-  vec4 highColor = vec4(.1,0,0,1);
+  vec4 lowColor = vec4(0,0,.1,1);
+  vec4 highColor = vec4(0,0,1,1);
 
   float normalizedHeight = (h + 5.35) / 10.7;
 

@@ -27,14 +27,14 @@ int main(int argc, char *argv[]) {
 
   Editor::PerformanceOverlay::init();
 
-  Renderer::Mesh *mesh = Renderer::GPUMemoryManager::CreateMesh(); {
-    mesh->setVertices({
-      Renderer::Mesh::Vertex{{-1,-1, 0}, {1,0,0,1}},
-      Renderer::Mesh::Vertex{{ 0, 1, 0}, {0,1,0,1}},
-      Renderer::Mesh::Vertex{{ 1,-1, 0}, {0,0,1,1}},
-    });
-    mesh->setIndices({0,1,2});
-  }
+  // Renderer::Mesh *mesh = Renderer::GPUMemoryManager::CreateMesh(); {
+  //   mesh->setVertices({
+  //     Renderer::Mesh::Vertex{{-1,-1, 0}, {1,0,0,1}},
+  //     Renderer::Mesh::Vertex{{ 0, 1, 0}, {0,1,0,1}},
+  //     Renderer::Mesh::Vertex{{ 1,-1, 0}, {0,0,1,1}},
+  //   });
+  //   mesh->setIndices({0,1,2});
+  // }
 
   Renderer::Shader unlitShader("Unlit");
 
@@ -48,32 +48,34 @@ int main(int argc, char *argv[]) {
     const glm::ivec2 grid = glm::ivec2{1419,1419};
     const float scale = .1f;
 
-    std::vector<Renderer::Mesh::Vertex> vertices;
+    std::vector<Renderer::Mesh::Vertex> vertices((grid.x + 1) * (grid.y + 1));
     for(int y = 0; y <= grid.y; y++) {
       for(int x = 0; x <= grid.x; x++) {
-        vertices.push_back(Renderer::Mesh::Vertex{
+        vertices[x + y * (grid.x + 1)] = Renderer::Mesh::Vertex{
           glm::vec3{x - static_cast<float>(grid.x + 1) / 2.0f, 0, -(y - static_cast<float>(grid.y + 1) / 2.0f)} * scale,
           {0,0,1,1},
-        });
+        };
       }
     }
     water->setVertices(vertices);
 
-    std::vector<Renderer::Mesh::Index> indices;
+    std::vector<Renderer::Mesh::Index> indices(grid.x * grid.y * 6);
     for(int y = 0; y < grid.y; y++) {
       for(int x = 0; x < grid.x; x++) {
+        const uint64_t start = (static_cast<uint64_t>(x) + static_cast<uint64_t>(y) * grid.x) * 6;
+
         const Renderer::Mesh::Index a = x + y * (grid.x + 1);
         const Renderer::Mesh::Index b = a + grid.x + 1;
         const Renderer::Mesh::Index c = b + 1;
         const Renderer::Mesh::Index d = a + 1;
-        
-        indices.push_back(a);
-        indices.push_back(b);
-        indices.push_back(c);
 
-        indices.push_back(a);
-        indices.push_back(c);
-        indices.push_back(d);
+        indices[start + 0] = a;
+        indices[start + 1] = b;
+        indices[start + 2] = c;
+
+        indices[start + 3] = a;
+        indices[start + 4] = c;
+        indices[start + 5] = d;
       }
     }
     water->setIndices(indices);
@@ -168,15 +170,15 @@ int main(int argc, char *argv[]) {
         } //GL Init
 
 
-        { //Triangle
-          unlitShader.use();
-          unlitShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
-          unlitShader.setUniform("uView", camera->getViewMatrix());
-          unlitShader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
+        // { //Triangle
+        //   unlitShader.use();
+        //   unlitShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
+        //   unlitShader.setUniform("uView", camera->getViewMatrix());
+        //   unlitShader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
 
-          mesh->use();
-          mesh->draw();
-        } //Triangle
+        //   mesh->use();
+        //   mesh->draw();
+        // } //Triangle
         { //Water
           waterShader->use();
           waterShader->setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
