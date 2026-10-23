@@ -19,6 +19,7 @@
 
 
 static bool wireframeMode = false;
+static bool paused = false;
 int main(int argc, char *argv[]) {
   System::init();
   Renderer::Core::init(true);
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
   Renderer::Mesh water; {
     water();
 
-    const glm::ivec2 grid = glm::ivec2{1419,1419};
+    const glm::ivec2 grid = glm::ivec2{1200,1200};
     const float scale = .1f;
 
     std::vector<Renderer::Mesh::Vertex> vertices((grid.x + 1) * (grid.y + 1));
@@ -87,11 +88,7 @@ int main(int argc, char *argv[]) {
 
       else if(const auto *keyPressed = event.getIf<sf::Event::KeyPressed>()) {
         User::HandleKeyPressed(keyPressed);
-        if(keyPressed->code == sf::Keyboard::Key::Space) {
-          static bool cap = false;
-          cap = !cap;
-          Renderer::Core::window->setFramerateLimit(cap? Renderer::Monitor::RefreshRate / 2 : 0);
-        }
+        if(keyPressed->code == sf::Keyboard::Key::Space) paused = !paused;
         else if(keyPressed->code == sf::Keyboard::Key::F1) Editor::UI::PerformanceOverlay::ToggleEnabled();
         else if(keyPressed->code == sf::Keyboard::Key::F2) {
           wireframeMode = !wireframeMode;
@@ -162,23 +159,111 @@ int main(int argc, char *argv[]) {
         } //GL Init
 
 
-        // { //Triangle
-        //   unlitShader.use();
-        //   unlitShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
-        //   unlitShader.setUniform("uView", camera->getViewMatrix());
-        //   unlitShader.setUniform("uModel", Renderer::Transform({0,0,-3}).getModelMatrix());
+        { //Scene
+          static Renderer::Mesh mesh;
+          static std::vector<Renderer::Transform> meshInstances;
+          static bool sceneGenerated = false;
 
-        //   mesh->use();
-        //   mesh->draw();
-        // } //Triangle
+          if(sceneGenerated == false) {
+            sceneGenerated = true;
+
+            { //Cube
+              mesh();
+              
+              std::vector<Renderer::Mesh::Vertex> vertices;
+              vertices = {
+                Renderer::Mesh::Vertex{{-1,-1, 1}, {1,0,0,1}},
+                Renderer::Mesh::Vertex{{-1, 1, 1}, {0,1,0,1}},
+                Renderer::Mesh::Vertex{{ 1, 1, 1}, {0,0,1,1}},
+                Renderer::Mesh::Vertex{{ 1,-1, 1}, {1,1,1,1}},
+                
+                Renderer::Mesh::Vertex{{-1,-1,-1}, {1,0,0,1}},
+                Renderer::Mesh::Vertex{{-1, 1,-1}, {0,1,0,1}},
+                Renderer::Mesh::Vertex{{ 1, 1,-1}, {0,0,1,1}},
+                Renderer::Mesh::Vertex{{ 1,-1,-1}, {1,1,1,1}},
+              };
+
+              std::vector<Renderer::Mesh::Index> indices;
+              indices = {
+                0,4,5, 0,5,1, //-x
+                6,7,3, 6,3,2, //+x
+
+                0,3,7, 0,7,4, //-y
+                1,5,6, 1,6,2, //+y
+
+                7,6,5, 7,5,4, //-z
+                0,1,2, 0,2,3, //+z
+              };
+
+              mesh.setVertices(vertices);
+              mesh.setIndices(indices);
+            } //Cube
+
+            std::mt19937 gen(std::chrono::high_resolution_clock().now().time_since_epoch().count());
+            std::uniform_real_distribution<float> rand(0,1);
+
+            auto randPos = [&]() {
+              return glm::vec3{
+                ((rand(gen) * 2) - 1) * 50.0f,
+                ((rand(gen) * 2) - 1) * 50.0f,
+                ((rand(gen) * 2) - 1) * 50.0f
+              };
+            };
+            auto randRot = [&]() {
+              return
+                glm::angleAxis(rand(gen) * glm::two_pi<float>(), glm::vec3{1,0,0}) *
+                glm::angleAxis(rand(gen) * glm::two_pi<float>(), glm::vec3{0,1,0});
+            };
+            auto randSiz = [&]() {
+              return glm::vec3{
+                .1f + rand(gen) * 2.9f,
+                .1f + rand(gen) * 2.9f,
+                .1f + rand(gen) * 2.9f
+              };
+            };
+
+            for(int i = 0; i < 100; i++) {
+              meshInstances.push_back(Renderer::Transform{randPos(), randRot(), randSiz()});
+            }
+          }
+          
+          unlitShader.use();
+          mesh.use();
+          for(const Renderer::Transform &transform : meshInstances) {
+            unlitShader.setUniform("uModel", transform.getModelMatrix());
+            mesh.draw();
+          }
+        } //Scene
         { //Water
           waterShader.use();
           waterShader.setUniform("uProj", camera->getProjectionMatrix(Renderer::Core::windowSize));
           waterShader.setUniform("uView", camera->getViewMatrix());
           waterShader.setUniform("uModel", Renderer::Transform({0,-3,0}).getModelMatrix());
 
+          waterShader.setUniform("uCamPos", camera->transform.position);
+          waterShader.setUniform("uSunDir", glm::normalize(glm::vec3{1,1,-1}));
+          waterShader.setUniform("uSunColor", glm::vec3{1.0f, 0.98f, 0.93f});
+
+          waterShader.setUniform("uChoppiness", 1.5f);
+          waterShader.setUniform("uAmplitudeScale", 1.0f);
+
+          waterShader.setUniform("uFoamThreshold", 1.0f);
+          waterShader.setUniform("uFoamIntensity", 1.0f);
+
+          waterShader.setUniform("uFogColor", glm::vec4{1,.7,.5,1});
+          waterShader.setUniform("uFogDensity", .7f);
+
+          waterShader.setUniform("uWindDir", glm::vec2{1,1});
+          waterShader.setUniform("uWindSpeed", 35.0f);
+
+          waterShader.setUniform("uMeshSpacing", .5f);
+
+          waterShader.setUniform("uSceneColor", 1);
+          waterShader.setUniform("uSceneDepth", 2);
+          waterShader.setUniform("uHasSceneTex", false);
+
           static float t = 0;
-          t += System::deltaTime;
+          if(paused == false) t += System::deltaTime;
           waterShader.setUniform("t", t);
 
 

@@ -37,49 +37,55 @@ void PerformanceOverlay::update(float _dt) {
 void PerformanceOverlay::draw(const sf::Font &_font) {
   if(IsEnabled == false) return;
 
-  const int elementCount = 3;
-  const float f_elementCount = static_cast<float>(elementCount);
+  static constexpr int elementCount = 3;
+  static constexpr float f_elementCount = static_cast<float>(elementCount);
 
-  const int outlineThickness = 4;
+  static constexpr int outlineThickness = 4;
+  static constexpr float outlineSaturation = .1f;
+  static constexpr float elementSaturation = .1f;
+  static constexpr uint8_t alpha = 255;
 
-  const sf::Vector2f startPad = sf::Vector2f{Rect.size.x * .05f, Rect.size.y * .05f} + sf::Vector2f{1,1} * static_cast<float>(outlineThickness);
-  const sf::Vector2f elementSize = sf::Vector2f{Rect.size.x - startPad.x * 2, Rect.size.y * .8f / f_elementCount - 0 / f_elementCount} - sf::Vector2f{1,2} * static_cast<float>(outlineThickness);
-  const float graphWidth = elementSize.x * .6f;
+  static const sf::Vector2f elementSize = sf::Vector2f{Rect.size.x, Rect.size.y * .8f / f_elementCount - 0 / f_elementCount} - sf::Vector2f{1,2} * static_cast<float>(outlineThickness);
+  static const float graphWidth = elementSize.x * .6f;
 
-  const Renderer::LineGraph *lineGraphs[3] = {&fpsGraph, &vramGraph, &testGraph};
-  const sf::Color colors[3] = {sf::Color(0,0,255,100), sf::Color(255,0,0,100), sf::Color(0,255,0,100)};
-  const std::string names[3] = {"FPS", "VRAM", "Performance"};
-  const std::string values[3] = {
-    std::to_string(static_cast<int>(fpsGraph.getValue())),
-    std::to_string(static_cast<int>(vramGraph.getValue() / 1000)) + "KB",
-    std::to_string(static_cast<int>(testGraph.getValue() * 100.0f)) + "%",
+  struct Element {
+  public:
+    Renderer::LineGraph *graph = nullptr;
+    sf::Color color = sf::Color::White;
+    std::string name = "None";
+    std::string value = "0x0";
+  };
+
+  const Element elements[3] = {
+    {&fpsGraph,  sf::Color(0,0,255 * elementSaturation, alpha), "FPS",         std::to_string(static_cast<int>(fpsGraph.getValue()))},
+    {&vramGraph, sf::Color(255 * elementSaturation,0,0, alpha), "VRAM",        std::to_string(static_cast<int>(vramGraph.getValue() / 1000)) + "KB"},
+    {&vramGraph, sf::Color(0,255 * elementSaturation,0, alpha), "Performance", std::to_string(static_cast<int>(testGraph.getValue() * 100.0f)) + "%"},
   };
 
 
-  sf::RectangleShape shape(Rect.size);
-  shape.setFillColor(sf::Color(125,125,125,225));
-  shape.setPosition(Rect.position);
-  Renderer::Core::window->draw(shape);
-
+  sf::RectangleShape shape;
+  shape.setOutlineThickness(outlineThickness);
+  shape.setOutlineColor(sf::Color(255 * outlineSaturation,255 * outlineSaturation,255 * outlineSaturation, alpha));
+  
   sf::Text text(_font);
   text.setCharacterSize(15);
   text.setStyle(sf::Text::Style::Bold);
 
 
   for(int i = 0; i < elementCount; i++) {
-    const sf::Vector2f start = Rect.position + startPad + sf::Vector2f{0, (elementSize.y + outlineThickness * 2) * i};
+    const Element &element = elements[i];
 
-    shape.setOutlineThickness(outlineThickness);
-    shape.setOutlineColor(sf::Color::Black);
+    const sf::Vector2f start = Rect.position + sf::Vector2f{0, (elementSize.y + outlineThickness * 2) * i};
+
     shape.setPosition(start);
     shape.setSize(elementSize);
-    shape.setFillColor(colors[i]);
+    shape.setFillColor(element.color);
     Renderer::Core::window->draw(shape);
 
     { //Label Text
       const sf::Vector2f labelTextAnchor = start + sf::Vector2f{elementSize.x - graphWidth, elementSize.y} / 2.0f;
 
-      text.setString(names[i]);
+      text.setString(element.name);
 
       const sf::FloatRect localBounds = text.getLocalBounds();
       text.setPosition(labelTextAnchor - localBounds.size / 2.0f - localBounds.position);
@@ -88,7 +94,7 @@ void PerformanceOverlay::draw(const sf::Font &_font) {
     { //Value Text
       const sf::Vector2f valueTextAnchor = start + sf::Vector2f{elementSize.x - graphWidth + 5, elementSize.y / 2.0f};
 
-      text.setString(values[i]);
+      text.setString(element.value);
 
       const sf::FloatRect localBounds = text.getLocalBounds();
       // text.setPosition(valueTextAnchor - sf::Vector2f{0, localBounds.size.y / 2.0f - localBounds.position.y});
@@ -97,6 +103,6 @@ void PerformanceOverlay::draw(const sf::Font &_font) {
     } //Value Text
 
 
-    lineGraphs[i]->draw(sf::FloatRect{start + sf::Vector2f{elementSize.x - graphWidth, 0}, sf::Vector2f{graphWidth, elementSize.y}}, sf::Color::White);
+    element.graph->draw(sf::FloatRect{start + sf::Vector2f{elementSize.x - graphWidth, 0}, sf::Vector2f{graphWidth, elementSize.y}}, sf::Color::White);
   }
 }
