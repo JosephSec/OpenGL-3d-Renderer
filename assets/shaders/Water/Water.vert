@@ -11,7 +11,7 @@
 //
 // UNIFORMS (types matter - a wrong glUniform* call is silently ignored):
 //   uProj, uView, uModel  mat4
-//   t                     float  seconds
+//   uTime                 float  seconds
 //   uCamPos               vec3   world-space camera position
 //   uWindDir              vec2   (x,z) direction the wind blows TOWARD; need not be normalized
 //   uWindSpeed            float  m/s (1 unit = 1 m). Clamped to [2,30]. Good range 4..15.
@@ -37,7 +37,7 @@ out float vLostSlopeVar;  // slope variance of waves faded out by distance -> be
 uniform mat4  uProj;
 uniform mat4  uView;
 uniform mat4  uModel;
-uniform float t;
+uniform float uTime;
 uniform vec3  uCamPos;
 uniform vec2  uWindDir;
 uniform float uWindSpeed;
@@ -142,7 +142,7 @@ void main() {
     float ka  = wv.k * a;
     float A   = q * ka;
 
-    float ph = wv.k * dot(wv.d, xz) - wv.w * t + wv.ph;
+    float ph = wv.k * dot(wv.d, xz) - wv.w * uTime + wv.ph;
     float s  = sin(ph);
     float c  = cos(ph);
 

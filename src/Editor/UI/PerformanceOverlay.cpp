@@ -37,16 +37,10 @@ void PerformanceOverlay::update(float _dt) {
 void PerformanceOverlay::draw(const sf::Font &_font) {
   if(IsEnabled == false) return;
 
-  static constexpr int elementCount = 3;
-  static constexpr float f_elementCount = static_cast<float>(elementCount);
-
   static constexpr int outlineThickness = 4;
   static constexpr float outlineSaturation = .1f;
   static constexpr float elementSaturation = .1f;
   static constexpr uint8_t alpha = 255;
-
-  static const sf::Vector2f elementSize = sf::Vector2f{Rect.size.x, Rect.size.y * .8f / f_elementCount - 0 / f_elementCount} - sf::Vector2f{1,2} * static_cast<float>(outlineThickness);
-  static const float graphWidth = elementSize.x * .6f;
 
   struct Element {
   public:
@@ -56,10 +50,16 @@ void PerformanceOverlay::draw(const sf::Font &_font) {
     std::string value = "0x0";
   };
 
-  const Element elements[3] = {
+  static constexpr int elementCount = 2;
+  static constexpr float f_elementCount = static_cast<float>(elementCount);
+
+  static const sf::Vector2f elementSize = sf::Vector2f{Rect.size.x, Rect.size.y * .8f / f_elementCount - 0 / f_elementCount} - sf::Vector2f{1,2} * static_cast<float>(outlineThickness);
+  static const float graphWidth = elementSize.x * .6f;
+
+  const Element elements[2] = {
     {&fpsGraph,  sf::Color(0,0,255 * elementSaturation, alpha), "FPS",         std::to_string(static_cast<int>(fpsGraph.getValue()))},
     {&vramGraph, sf::Color(255 * elementSaturation,0,0, alpha), "VRAM",        std::to_string(static_cast<int>(vramGraph.getValue() / 1000)) + "KB"},
-    {&vramGraph, sf::Color(0,255 * elementSaturation,0, alpha), "Performance", std::to_string(static_cast<int>(testGraph.getValue() * 100.0f)) + "%"},
+    // {&vramGraph, sf::Color(0,255 * elementSaturation,0, alpha), "Performance", std::to_string(static_cast<int>(testGraph.getValue() * 100.0f)) + "%"},
   };
 
 

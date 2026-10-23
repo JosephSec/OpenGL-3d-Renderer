@@ -8,7 +8,7 @@
 //
 // UNIFORMS (types matter - a wrong glUniform* call is silently ignored):
 //   uProj, uView          mat4
-//   t                     float
+//   uTime                     float
 //   uCamPos               vec3
 //   uSunDir               vec3   direction TOWARD the sun
 //   uSunColor             vec3   linear HDR sun radiance. Try vec3(3.0, 2.7, 2.2); length 2..6.
@@ -23,7 +23,7 @@
 //                                Share of the surface that ends up foamy (wind 10 m/s, intensity 1.0):
 //                                  0.5 -> ~11%   1.0 -> ~4%   1.5 -> ~1%   2.0 -> ~0.2%
 //                                Real whitecaps at 10 m/s are a few percent, so 0.8..1.3 looks natural.
-//                                (Doesn't depend on uChoppiness once that is >= 1; below 1 foam thins out.)
+//                                (Doesn'uTime depend on uChoppiness once that is >= 1; below 1 foam thins out.)
 //   uFoamIntensity        float  coverage/opacity gain for foam. 1.0 = nominal (4% at threshold 1.0),
 //                                2.0 = ~7%, white and blobby. Good range 0.5..1.5.
 //   uSceneColor           sampler2D  scene rendered WITHOUT water (bind to unit 1)
@@ -42,7 +42,7 @@ out vec4 FragColor;
 
 uniform mat4  uProj;
 uniform mat4  uView;
-uniform float t;
+uniform float uTime;
 uniform vec3  uCamPos;
 uniform vec3  uSunDir;
 uniform vec3  uSunColor;
@@ -171,7 +171,7 @@ void detailWaves(vec2 xz, vec2 wind, float U, float spacing, float fp,
     float ca = cos(ang), sa = sin(ang);
     vec2  d  = vec2(ca * wind.x - sa * wind.y, sa * wind.x + ca * wind.y);
 
-    float ph  = k * dot(d, xz) - wc * t + TAU * hash11(uint(i) * 2u + 102u);
+    float ph  = k * dot(d, xz) - wc * uTime + TAU * hash11(uint(i) * 2u + 102u);
     float vis = 1.0 - smoothstep(0.2, 0.5, fp / lam);
     float ka  = k * a;
 
@@ -260,7 +260,7 @@ void main() {
 
   // ---- foam ----------------------------------------------------------------------------
   float m = smoothstep(uFoamThreshold, uFoamThreshold + 1.2, vFoamDrive);
-  vec2  foamPos = vWorldPos.xz * 0.9 - wind * (t * 0.15);
+  vec2  foamPos = vWorldPos.xz * 0.9 - wind * (uTime * 0.15);
   float pat = smoothstep(0.25, 0.75, fbm(foamPos));
   pat = mix(0.6, pat, 1.0 - smoothstep(0.4, 2.0, fp));       // distant foam: no shimmer
   float cover = max(m, shore) * uFoamIntensity;
